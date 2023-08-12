@@ -26,6 +26,37 @@ static void LogTrace(const char * format, ...) {
     va_end(args);
 }
 
+struct GameSession {
+    bool running;
+    double currentTime;
+    union {
+        ENetPeer * peers[2];
+        struct {
+            ENetPeer * peer1;
+            ENetPeer * peer2;
+        };
+    };
+
+    Map map;
+
+    i32 packetCount;
+    GamePacket incomingPackets[128];
+};
+
+#define MAX_SESSIONS 32
+#define SESSION_TICK_RATE 30.0
+#define SESSION_TICK_TIME (1.0 / SESSION_TICK_RATE)
+static GameSession sessions[MAX_SESSIONS];
+
+int GetSessionsCount() {
+    int count = 0;
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (sessions[i].running) {
+            count++;
+        }
+    }
+    return count;
+}
 
 std::atomic_bool running = true;
 
@@ -36,6 +67,13 @@ static void ReadServerConsole() {
             printf("Quitting...\n");
             running = false;
             break;
+        }
+
+        if (strcmp(str, "status\n") == 0){
+            printf("Status:\n");
+            printf("Sessions running: %d\n",    GetSessionsCount());
+            printf("Session tick rate: %f\n",   SESSION_TICK_RATE);
+            printf("Session tick time: %f\n",   SESSION_TICK_TIME);
         }
 
         ZeroMemory(str, 256);
@@ -83,23 +121,6 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> end_time;
 };
 
-struct GameSession {
-    bool running;
-    double currentTime;
-    union {
-        ENetPeer * peers[2];
-        struct {
-            ENetPeer * peer1;
-            ENetPeer * peer2;
-        };
-    };
-
-    Map map;
-
-    i32 packetCount;
-    GamePacket incomingPackets[128];
-};
-
 static void GameSessionSendToPeer(GameSession * session, GamePacket * packet, int peerIndex, bool reliable) {
     ENetPacket * enetPacket = enet_packet_create(packet, sizeof(GamePacket), reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
     enet_peer_send(session->peers[peerIndex], 0, enetPacket);
@@ -111,11 +132,6 @@ struct PeerData {
     int playerNumber;
     char name[32];
 };
-
-#define MAX_SESSIONS 32
-#define SESSION_TICK_RATE 30.0
-#define SESSION_TICK_TIME (1.0 / SESSION_TICK_RATE)
-static GameSession sessions[MAX_SESSIONS];
 
 int main(int argc, char * argv[]) {
     if (enet_initialize() != 0) {
@@ -179,7 +195,10 @@ int main(int argc, char * argv[]) {
 
         switch (event.type) {
         case ENET_EVENT_TYPE_CONNECT: {
-            printf("A new client connected from\n");
+            char ip[32] = {};
+            enet_address_get_host_ip(&event.peer->address, ip, 32);
+            printf("A new client connected from %s\n", ip);
+
             event.peer->data = Allocate(sizeof(PeerData));
             PeerData * peerData = (PeerData *)event.peer->data;
             peerData->gameSessionIndex = -1;
@@ -254,11 +273,15 @@ int main(int argc, char * argv[]) {
             enet_packet_destroy(event.packet);
         } break;
         case ENET_EVENT_TYPE_DISCONNECT: {
-            printf("%s disconnected.\n", (char *)event.peer->data);
+            char ip[32] = {};
+            enet_address_get_host_ip(&event.peer->address, ip, 32);
+            printf("%s disconnected.\n", ip);
             event.peer->data = nullptr;
         }   break;
         case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {
-            printf("%s disconnected due to timeout.\n", (char *)event.peer->data);
+            char ip[32] = {};
+            enet_address_get_host_ip(&event.peer->address, ip, 32);
+            printf("%s disconnected due to timeout.\n", ip);
             event.peer->data = nullptr;
         } break;
         case ENET_EVENT_TYPE_NONE: {

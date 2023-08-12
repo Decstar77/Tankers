@@ -10,4 +10,4 @@ bool NetworkIsConnected();
 
 void NetworkSendPacket(GamePacket & packet, bool reliable);
 
-
+i32 NetworkGetPing();

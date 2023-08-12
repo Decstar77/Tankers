@@ -6,8 +6,11 @@
 #include "game_local.h"
 
 #include "../vendor/raylib/include/raylib.h"
+
 #include <stdio.h>
+#include <stdarg.h>
 #include <string>
+#include <cstring>
 
 struct GameSettings {
     int width;
@@ -15,6 +18,7 @@ struct GameSettings {
     int posX;
     int posY;
     bool fullscreen;
+    char serverIp[64];
 };
 
 static GameSettings ParseConfigFileForGameSettings(Config & config) {
@@ -34,6 +38,8 @@ static GameSettings ParseConfigFileForGameSettings(Config & config) {
         }
         else if (strcmp(config.entries[i].key, "window_fullscreen") == 0) {
             settings.fullscreen = atoi(config.entries[i].value) != 0;
+        } else if (strcmp(config.entries[i].key, "server_ip") == 0) {
+            strcpy_s(settings.serverIp, config.entries[i].value);
         }
     }
 
@@ -85,6 +91,7 @@ int main(int argc, char * argv[]) {
     printf("height: %d\n", gameSettings.height);
     printf("posX: %d\n", gameSettings.posX);
     printf("posY: %d\n", gameSettings.posY);
+    printf("using server: %s\n", gameSettings.serverIp);
 
     Map map = {};
     map.width = gameSettings.width;
@@ -111,6 +118,7 @@ int main(int argc, char * argv[]) {
                 static const char * text = "Connect";
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2, text)) {
                     if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
+                    //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
@@ -208,10 +216,18 @@ int main(int argc, char * argv[]) {
             }
         }
 
+        std::string fps = "FPS: " + std::to_string(GetFPS());
+        std::string ping = "Ping: " + std::to_string(NetworkGetPing());
+
+        DrawText(fps.c_str(), 10, 10, 20, BLACK);
+        DrawText(ping.c_str(), 10, 30, 20, BLACK);
+
         //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
 
         EndDrawing();
     }
+
+    NetoworkDisconnectFromServer();
 
     CloseWindow();
 

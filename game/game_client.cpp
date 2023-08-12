@@ -53,6 +53,28 @@ bool NetworkConnectToServer(const char * address, int port) {
 void NetoworkDisconnectFromServer() {
     if (server != nullptr) {
         enet_peer_disconnect(server, 0);
+        ENetEvent event = {};
+        bool disconnected = false;
+        while (!disconnected && enet_host_service(client, &event, 3000) > 0) {
+            switch (event.type) {
+            case ENET_EVENT_TYPE_RECEIVE: {
+                enet_packet_destroy(event.packet);
+                break;
+            }
+            case ENET_EVENT_TYPE_DISCONNECT: {
+                printf("Disconnection succeeded.\n");
+                disconnected = true;
+                break;
+            }
+            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {
+                printf("Disconnection failed.\n");
+                break;
+            }
+            case ENET_EVENT_TYPE_NONE: {
+                break;
+            }
+            }
+        }
     }
 
     if (client != nullptr) {
@@ -113,4 +135,12 @@ void NetworkSendPacket(GamePacket & packet, bool reliable) {
 
     ENetPacket * enetPacket = enet_packet_create(&packet, sizeof(packet), reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
     enet_peer_send(server, 0, enetPacket);
+}
+
+i32 NetworkGetPing() {
+    if (server == nullptr) {
+        return 0;
+    }
+
+    return (i32)server->roundTripTime;
 }
