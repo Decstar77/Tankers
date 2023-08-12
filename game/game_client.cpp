@@ -2,6 +2,10 @@
 
 #include <stdio.h>
 
+#ifdef ZeroMemory
+#undef ZeroMemory
+#endif
+
 #define ENET_IMPLEMENTATION
 #include "../vendor/enet.h"
 
