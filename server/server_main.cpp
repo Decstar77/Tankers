@@ -1,7 +1,6 @@
 
 #include "../shared/shared_game.h"
-
-#ifdef ZeroMemory
+#ifdef _WIN32
 #undef ZeroMemory
 #endif
 
