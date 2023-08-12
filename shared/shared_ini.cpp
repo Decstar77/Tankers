@@ -1,6 +1,6 @@
 #include "shared_ini.h"
 #include <stdio.h>
-#include <string>
+#include <cstring>
 
 // Ignore C4996
 #pragma warning(disable : 4996)
