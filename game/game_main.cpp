@@ -119,8 +119,8 @@ int main(int argc, char * argv[]) {
             if (NetworkIsConnected() == false) {
                 static const char * text = "Connect";
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2, text)) {
-                    if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
-                        //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
+                    //if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
+                    if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
