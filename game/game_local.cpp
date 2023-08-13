@@ -8,17 +8,17 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
     player->pos = player->pos + dir * speed;
 
     // Wrap player movement
-    if (player->pos.x < 0.0f) {
-        player->pos.x += (f32)map.width;
+    if (player->pos.x < player->size) {
+        player->pos.x = player->size;
     }
-    if (player->pos.x >= (f32)map.width) {
-        player->pos.x -= (f32)map.width;
+    else if (player->pos.x > map.width - player->size) {
+        player->pos.x = map.width - player->size;
     }
-    if (player->pos.y < 0.0f) {
-        player->pos.y += (f32)map.height;
+    if (player->pos.y < player->size){
+        player->pos.y = player->size;
     }
-    if (player->pos.y >= (f32)map.height) {
-        player->pos.y -= (f32)map.height;
+    else if (player->pos.y > map.height - player->size) {
+        player->pos.y = map.height - player->size;
     }
 }
 

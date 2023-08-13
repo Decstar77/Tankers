@@ -48,7 +48,7 @@ struct GameSession {
 #define SESSION_TICK_TIME (1.0 / SESSION_TICK_RATE)
 static GameSession sessions[MAX_SESSIONS];
 
-int GetSessionsCount() {
+static int GetSessionsRunningCount() {
     int count = 0;
     for (int i = 0; i < MAX_SESSIONS; i++) {
         if (sessions[i].running) {
@@ -56,6 +56,17 @@ int GetSessionsCount() {
         }
     }
     return count;
+}
+
+static void GameSessionSendToPeer(GameSession * session, GamePacket * packet, int peerIndex, bool reliable) {
+    ENetPacket * enetPacket = enet_packet_create(packet, sizeof(GamePacket), reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
+    enet_peer_send(session->peers[peerIndex], 0, enetPacket);
+}
+
+static void GameSessionShutdown(GameSession * session) {
+    session->running = false;
+    session->peer1 = nullptr;
+    session->peer2 = nullptr;
 }
 
 std::atomic_bool running = true;
@@ -71,7 +82,7 @@ static void ReadServerConsole() {
 
         if (strcmp(str, "status\n") == 0){
             printf("Status:\n");
-            printf("Sessions running: %d\n",    GetSessionsCount());
+            printf("Sessions running: %d\n",    GetSessionsRunningCount());
             printf("Session tick rate: %f\n",   SESSION_TICK_RATE);
             printf("Session tick time: %f\n",   SESSION_TICK_TIME);
         }
@@ -120,11 +131,6 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::chrono::time_point<std::chrono::steady_clock> end_time;
 };
-
-static void GameSessionSendToPeer(GameSession * session, GamePacket * packet, int peerIndex, bool reliable) {
-    ENetPacket * enetPacket = enet_packet_create(packet, sizeof(GamePacket), reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
-    enet_peer_send(session->peers[peerIndex], 0, enetPacket);
-}
 
 struct PeerData {
     int gameSessionIndex;
@@ -276,6 +282,10 @@ int main(int argc, char * argv[]) {
             char ip[32] = {};
             enet_address_get_host_ip(&event.peer->address, ip, 32);
             printf("%s disconnected.\n", ip);
+            PeerData * peerData = (PeerData *)event.peer->data;
+            if (peerData->gameSessionIndex != -1) {
+                sessions[peerData->gameSessionIndex].running = false;
+            }
             event.peer->data = nullptr;
         }   break;
         case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {

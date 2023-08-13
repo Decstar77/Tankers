@@ -15,6 +15,7 @@ struct Player {
     f32 remoteRot;
     f32 rot;
     f32 fireCooldown;
+    f32 size;
 };
 
 #define MAX_BULLETS 256
@@ -39,11 +40,19 @@ Player * MapSpawnPlayer(Map & map);
 Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir);
 void MapUpdate(Map & map, f32 dt);
 
+enum MapGameOverReason {
+    MAP_GAME_OVER_REASON_INVALID = 0,
+    MAP_GAME_OVER_REASON_PLAYER_DISCONNECTED,
+    MAP_GAME_OVER_REASON_PLAYER_WON,
+    MAP_GAME_OVER_REASON_PLAYER_LOST,
+};
+
 enum GamePacketType {
     GAME_PACKET_TYPE_INVALID = 0,
     GAME_PACKET_TYPE_MAP_START,
     GAME_PACKET_TYPE_MAP_STREAM_DATA,
     GAME_PACKET_TYPE_MAP_PLAYER_SHOOT,
+    GAME_PACKET_TYPE_MAP_GAME_OVER,
 };
 
 struct GamePacket {
@@ -62,6 +71,9 @@ struct GamePacket {
             v2 pos;
             v2 dir;
         } playerShoot;
+        struct {
+            MapGameOverReason reason;
+        } gameOver;
     };
 };
 

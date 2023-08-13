@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-
 Player * MapSpawnPlayer(Map & map) {
     if (map.localPlayer.active == false) {
         map.localPlayer.active = true;
@@ -10,6 +9,7 @@ Player * MapSpawnPlayer(Map & map) {
         map.localPlayer.pos = { 100.0f, 100.0f };
         map.localPlayer.rot = 0.0f;
         map.localPlayer.fireCooldown = 0.0f;
+        map.localPlayer.size = 10.0f;
         return &map.localPlayer;
     }
 
@@ -19,6 +19,7 @@ Player * MapSpawnPlayer(Map & map) {
         map.remotePlayer.pos = { 200.0f, 200.0f };
         map.remotePlayer.rot = 0.0f;
         map.remotePlayer.fireCooldown = 0.0f;
+        map.remotePlayer.size = 10.0f;
         return &map.remotePlayer;
     }
 

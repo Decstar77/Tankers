@@ -50,7 +50,7 @@ static Config cfg = {};
 
 static void DrawPlayer(Player * player) {
     Color color = player->playerNumber == 1 ? RED : BLUE;
-    DrawCircle((int)player->pos.x, (int)player->pos.y, 10, color);
+    DrawCircle((int)player->pos.x, (int)player->pos.y, player->size, color);
     f32 gunRad = 15;
     Vector2 start = { player->pos.x, player->pos.y };
     Vector2 end = { player->pos.x + gunRad * cosf(player->rot), player->pos.y + gunRad * sinf(player->rot) };
