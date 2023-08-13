@@ -22,22 +22,48 @@ struct Player {
     f32 size;
 };
 
+/*
+1. Light Brown: These tanks are stationary and only shoot one bullet at a time. These are the easiest to take care of.
+2. Dark Brown: These tanks move around and shoot one bullet at a time. They can try to sneak up on you in the later stages if you're not careful.
+3. Blue: These tanks shoot rocket missiles. They can be a huge pain since I think these are one of the main ones that dodge my bullets.
+4. Yellow: These tanks plant three mines at a time. Some mines can appear offscreen and can explode you by surprise. Be on the lookout by shooting straight offscreen.
+5. Pink/Red: These tanks shoot up to three bullets at a time. They're not that bad, but can be a pain if there is a number of them in the later stages.
+6. Green: These tanks are stationary, but they're rocket missiles ricochet three times. These tanks will cause you anxiety because they are crazy accurate!
+6. Purple: These tanks increase their speed and can be hard to hit. In my opinion, these are the hardest slow bullet tanks to defeat.
+7. White: These tanks turn invisible. They're not as bad as the purple ones as you can not only see their tracks, but they're pretty slow for an easier target.
+8. Black: These tanks appear in stage 50 and beyond. They are the most difficult tank out of them all with their fast movements, quick reflexes, and rocket missiles!
+*/
+
 enum EnemyType {
     ENEMY_TYPE_INVALID = 0,
-    ENEMY_TYPE_TURRET,
+    ENEMY_TYPE_LIGHT_BROWN,
+    ENEMY_TYPE_DARK_BROWN,
     ENEMY_TYPE_COUNT,
 };
 
 struct Enemy {
+    bool active;
     EnemyType type;
     v2 pos;
-    f32 rot;
+    f32 tankRot;
+    f32 turretRot;
     f32 fireCooldown;
+    f32 size;
+
+    i32 lastSend;
+    v2 remotePos;
+    f32 remoteTankRot;
+    f32 remoteTurretRot;
+};
+
+struct MapTile {
+    v2 pos;
     f32 size;
 };
 
 #define MAX_BULLETS 256
 #define MAX_ENEMIES 256
+#define MAX_MAP_TILES 256
 
 struct Map {
     i32 width;
@@ -48,6 +74,9 @@ struct Map {
     i32 enemyCount;
     Enemy enemies[MAX_ENEMIES];
 
+    i32 tileCount;
+    MapTile tiles[MAX_MAP_TILES];
+
     union {
         Player players[2];
         struct {
@@ -56,6 +85,8 @@ struct Map {
         };
     };
 };
+
+void        MapAddTile(Map & map, v2 pos, f32 size);
 
 Player *    MapSpawnPlayer(Map & map);
 Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir);
@@ -108,19 +139,21 @@ struct GamePacket {
             MapGameOverReason reason;
         } gameOver;
         struct {
-            //i32 entityCount;
-            //i32 indices[20];
-            //v2  pos[20];
-            //f32 rot[20];
+            i32 entityCount;
+            i32 indices[20];
+            v2  pos[20];
+            f32 tankRot[20];
+            f32 turretRot[20];
         } entityStreamData;
     };
 };
 
 // Setting values
-constexpr i32 GAME_TICKS_PER_SECOND = 60;
+constexpr i32 GAME_TICKS_PER_SECOND = 30;
 constexpr i32 GAME_MAX_BYTES_PER_MS = 30; 
 
 // Calculated values
+constexpr f32 GAME_TICK_TIME = 1.0f / (f32)GAME_TICKS_PER_SECOND;
 constexpr f32 GAME_TICKS_PER_MS = (f32)GAME_TICKS_PER_SECOND / 1000.0f;
 constexpr i32 GAME_PACKET_SIZE_BYTES = sizeof(GamePacket);
 constexpr f32 GAME_MS_PER_TICK = 1.0f / GAME_TICKS_PER_MS;

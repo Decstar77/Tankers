@@ -2,16 +2,29 @@
 
 #include "shared_defines.h"
 
+#define PI 3.14159265358979323846f
+
+inline f32 RadToDeg(f32 rad) {
+    return rad * (180.0f / PI);
+}
+
+inline f32 DegToRad(f32 deg) {
+    return deg * (PI / 180.0f);
+}
+
 inline f32 Lerp(f32 a, f32 b, f32 t) {
     return a + (b - a) * t;
 }
 
-#define PI 3.14159265358979323846f
-inline f32 RadToDeg(f32 rad) {
-    return rad * (180.0f / PI);
-}
-inline f32 DegToRad(f32 deg) {
-    return deg * (PI / 180.0f);
+inline f32 LerpAngle(f32 a, f32 b, f32 t) {
+    f32 angle = b - a;
+    if (angle < -PI) {
+        angle += 2.0f * PI;
+    }
+    else if (angle > PI) {
+        angle -= 2.0f * PI;
+    }
+    return a + angle * t;
 }
 
 struct v2 {

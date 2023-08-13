@@ -49,20 +49,30 @@ static GameSettings ParseConfigFileForGameSettings(Config & config) {
 
 static Config cfg = {};
 
-static void DrawTank(v2 p, f32 size, f32 r, Color c) {
+static void DrawTank(v2 p, f32 size, f32 r, f32 tr, Color c) {
     Rectangle rect = { p.x, p.y, size, size };
     Vector2 origin = { size / 2, size / 2 };
     DrawRectanglePro(rect, origin, RadToDeg(r), c);
+
+    f32 gunRad = 15;
+    Vector2 start = { p.x, p.y };
+    Vector2 end = { p.x + gunRad * cosf(tr), p.y + gunRad * sinf(tr) };
+    DrawLineEx(start, end, 2.0f, BLACK);
 }
 
 static void DrawPlayer(Player * player) {
     Color color = player->playerNumber == 1 ? RED : BLUE;
-    DrawTank(player->pos, player->size, player->tankRot, color);
-    //DrawCircle((int)player->pos.x, (int)player->pos.y, player->size, color);
-    f32 gunRad = 15;
-    Vector2 start = { player->pos.x, player->pos.y };
-    Vector2 end = { player->pos.x + gunRad * cosf(player->turretRot), player->pos.y + gunRad * sinf(player->turretRot) };
-    DrawLineEx(start, end, 2.0f, BLACK);
+    DrawTank(player->pos, player->size, player->tankRot, player->turretRot, color);
+}
+
+static void DrawEnemy(Enemy * enemy) {
+    Color color = LIGHTGRAY;
+    switch (enemy->type) {
+    case ENEMY_TYPE_LIGHT_BROWN: color = { 196, 164, 132, 255 }; break;
+    case ENEMY_TYPE_DARK_BROWN: color = { 128, 64, 0, 255 }; break;
+    }
+
+    DrawTank(enemy->pos, enemy->size, enemy->tankRot, enemy->turretRot, color);
 }
 
 static bool DrawButton(i32 centerX, i32 centerY, const char * text) {
@@ -114,8 +124,6 @@ int main(int argc, char * argv[]) {
 
     SetTargetFPS(60);
 
-    i32 tickRate = 60;
-    f32 tickTime = 1.0f / (f32)tickRate;
     f32 accumulator = 0.0f;
     while (!WindowShouldClose()) {
         BeginDrawing();
@@ -154,8 +162,8 @@ int main(int argc, char * argv[]) {
                     map.localPlayer = packet.mapStart.localPlayer;
                     map.remotePlayer = packet.mapStart.remotePlayer;
 
-                    MapSpawnEnemy(map, ENEMY_TYPE_TURRET, v2{ 200.0f, 500.0f });
-                    MapSpawnEnemy(map, ENEMY_TYPE_TURRET, v2{ 600.0f, 500.0f });
+                    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
+                    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
                     isMainMenu = false;
@@ -172,16 +180,28 @@ int main(int argc, char * argv[]) {
                     printf("Game over, reason: %s\n", MapGameOverReasonToString(packet.gameOver.reason));
                     isGameOver = true;
                 } break;
+                case GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA: {
+                    for (i32 i = 0; i < packet.entityStreamData.entityCount; i++) {
+                        map.enemies[i].remotePos = packet.entityStreamData.pos[i];
+                        map.enemies[i].remoteTankRot = packet.entityStreamData.tankRot[i];
+                        map.enemies[i].remoteTurretRot = packet.entityStreamData.turretRot[i];
+                    }
+                } break;
                 }
             }
         }
 
         if (isMainMenu == false && isGameOver == false) {
+            static bool shouldShoot = false;
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                shouldShoot = true;
+            }
+
             float deltaTime = GetFrameTime();
             accumulator += deltaTime;
 
-            while (accumulator >= tickTime) {
-                accumulator -= tickTime;
+            while (accumulator >= GAME_TICK_TIME) {
+                accumulator -= GAME_TICK_TIME;
 
                 v2 dir = {};
                 bool moved = false;
@@ -208,27 +228,33 @@ int main(int argc, char * argv[]) {
                 Vector2 p = GetMousePosition();
                 LocalPlayerLook(map, &map.localPlayer, { p.x, p.y });
 
-                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                if (shouldShoot) {
                     LocalPlayerShoot(map, &map.localPlayer);
+                    shouldShoot = false;
                 }
 
                 LocalSendStreamData(map);
 
-                MapUpdate(map, tickTime);
+                MapUpdate(map, GAME_TICK_TIME);
             }
 
             map.remotePlayer.pos = Lerp(map.remotePlayer.pos, map.remotePlayer.remotePos, 0.1f);
-            map.remotePlayer.tankRot = Lerp(map.remotePlayer.tankRot, map.remotePlayer.remoteTankRot, 0.1f);
-            map.remotePlayer.turretRot = Lerp(map.remotePlayer.turretRot, map.remotePlayer.remoteTurretRot, 0.1f);
+            map.remotePlayer.tankRot = LerpAngle(map.remotePlayer.tankRot, map.remotePlayer.remoteTankRot, 0.1f);
+            map.remotePlayer.turretRot = LerpAngle(map.remotePlayer.turretRot, map.remotePlayer.remoteTurretRot, 0.1f);
+
+            for (i32 i = 0; i < map.enemyCount; i++) {
+                Enemy & enemy = map.enemies[i];
+                enemy.pos = Lerp(enemy.pos, enemy.remotePos, 0.1f);
+                enemy.tankRot = LerpAngle(enemy.tankRot, enemy.remoteTankRot, 0.1f);
+                enemy.turretRot = LerpAngle(enemy.turretRot, enemy.remoteTurretRot, 0.1f);
+            }
 
             DrawPlayer(&map.localPlayer);
             DrawPlayer(&map.remotePlayer);
 
             // DrawEnemies
             for (i32 i = 0; i < map.enemyCount; i++) {
-                Enemy & enemy = map.enemies[i];
-                Color color = enemy.type == ENEMY_TYPE_TURRET ? DARKGRAY : BLUE;
-                DrawRectangle((int)enemy.pos.x, (int)enemy.pos.y, (int)enemy.size, (int)enemy.size, color);
+                DrawEnemy(&map.enemies[i]);
             }
 
             // Draw bullets

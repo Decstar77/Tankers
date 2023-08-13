@@ -39,6 +39,7 @@ struct PeerData {
 
 struct GameSession {
     bool running;
+    i32 tickNumber;
     double currentTime;
     union {
         ENetPeer * peers[2];
@@ -55,8 +56,6 @@ struct GameSession {
 };
 
 #define MAX_SESSIONS 32
-#define SESSION_TICK_RATE 30.0
-#define SESSION_TICK_TIME (1.0 / SESSION_TICK_RATE)
 static GameSession sessions[MAX_SESSIONS];
 
 static int GetSessionsRunningCount() {
@@ -79,6 +78,12 @@ static void GameSessionSendToPeersExpect(GameSession * session, GamePacket * pac
         if (i != peerIndex) {
             GameSessionSendToPeer(session, packet, i, reliable);
         }
+    }
+}
+
+static void GameSessionSendToAllPeers(GameSession * session, GamePacket * packet, bool reliable) {
+    for (int i = 0; i < 2; i++) {
+        GameSessionSendToPeer(session, packet, i, reliable);
     }
 }
 
@@ -112,8 +117,8 @@ static void ReadServerConsole() {
         if (strcmp(str, "status\n") == 0) {
             printf("Status:\n");
             printf("Sessions running: %d\n", GetSessionsRunningCount());
-            printf("Session tick rate: %f\n", SESSION_TICK_RATE);
-            printf("Session tick time: %f\n", SESSION_TICK_TIME);
+            printf("Session tick rate: %d\n", GAME_TICKS_PER_SECOND);
+            printf("Session tick time: %f\n", GAME_TICK_TIME);
         }
 
         ZeroMemory(str, 256);
@@ -198,8 +203,8 @@ int main(int argc, char * argv[]) {
             GameSession * session = &sessions[gameSessionIndex];
             if (session->running) {
                 session->currentTime += deltaTime;
-                while (session->currentTime >= SESSION_TICK_TIME) {
-                    session->currentTime -= SESSION_TICK_TIME;
+                while (session->currentTime >= GAME_TICK_TIME) {
+                    session->currentTime -= GAME_TICK_TIME;
 
                     PeerData * peerData1 = (PeerData *)session->peer1->data;
                     PeerData * peerData2 = (PeerData *)session->peer2->data;
@@ -217,6 +222,46 @@ int main(int argc, char * argv[]) {
                     }
 
                     session->packetCount = 0;
+
+                    Map & map = session->map;
+                    for (int i = 0; i < map.enemyCount; i++) {
+                        Enemy & enemy = map.enemies[i];
+                        if (enemy.active) {
+                            enemy.fireCooldown -= GAME_TICK_TIME;
+
+                            v2 toPlayer = map.localPlayer.pos - enemy.pos;
+                            enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
+
+                            if (enemy.fireCooldown <= 0.0f) {
+                                enemy.fireCooldown = 1.5f;
+                                v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
+                                MapSpawnBullet(session->map, enemy.pos, dir);
+
+                                GamePacket packet = {};
+                                packet.type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;
+                                packet.shotFired.pos = enemy.pos;
+                                packet.shotFired.dir = dir;
+                                GameSessionSendToPeersExpect(session, &packet, peerData1->peerIndex, true);
+                                GameSessionSendToPeersExpect(session, &packet, peerData2->peerIndex, true);
+                            }
+                        }
+                    }
+
+                    GamePacket packet = {};
+                    packet.type = GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA;
+                    packet.entityStreamData.entityCount = map.enemyCount;
+                    for (int i = 0; i < map.enemyCount; i++) {
+                        Enemy & enemy = map.enemies[i];
+                        packet.entityStreamData.indices[i] = i;
+                        packet.entityStreamData.pos[i] = enemy.pos;
+                        packet.entityStreamData.tankRot[i] = enemy.tankRot;
+                        packet.entityStreamData.turretRot[i] = enemy.turretRot;
+                    }
+
+                    GameSessionSendToAllPeers(session, &packet, false);
+
+                    MapUpdate(session->map, GAME_TICK_TIME);
+                    session->tickNumber++;
                 }
             }
         }
@@ -240,6 +285,7 @@ int main(int argc, char * argv[]) {
                         sessions[i].running = true;
                         sessions[i].peer1 = holdingPeer;
                         sessions[i].peer2 = event.peer;
+                        sessions[i].tickNumber = 0;
 
                         PeerData * peerData1 = (PeerData *)sessions[i].peer1->data;
                         PeerData * peerData2 = (PeerData *)sessions[i].peer2->data;
@@ -266,8 +312,8 @@ int main(int argc, char * argv[]) {
                         packet.mapStart.remotePlayer = *player1;
                         GameSessionSendToPeer(&sessions[i], &packet, 1, true);
 
-                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_TURRET, v2{ 200.0f, 500.0f });
-                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_TURRET, v2{ 600.0f, 500.0f });
+                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
+                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
                         printf("Starting game session %d\n", i);
 
@@ -287,12 +333,16 @@ int main(int argc, char * argv[]) {
             PeerData * peerData = (PeerData *)event.peer->data;
             if (peerData->gameSessionIndex != -1) {
                 if (gamePacket->type == GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA) {
-                    GameSessionSendToPeersExpect( &sessions[ peerData->gameSessionIndex ], (GamePacket *)event.packet->data, peerData->peerIndex, false );
+                    GameSessionSendToPeersExpect(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, peerData->peerIndex, false);
+                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].pos = gamePacket->playerStreamData.pos;
+                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tankRot = gamePacket->playerStreamData.tankRot;
+                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].turretRot = gamePacket->playerStreamData.turretRot;
                 }
                 else {
                     sessions[peerData->gameSessionIndex].incomingPackets[sessions[peerData->gameSessionIndex].packetCount++] = *gamePacket;
                 }
-            } else {
+            }
+            else {
                 printf("Received packet from peer without game session\n");
             }
             enet_packet_destroy(event.packet);

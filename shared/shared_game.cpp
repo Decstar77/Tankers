@@ -4,6 +4,12 @@
 #include <math.h>
 #include <cstring> // For ubuntu
 
+void MapAddTile(Map & map, v2 pos, f32 size) {
+    MapTile & tile = map.tiles[map.tileCount++];
+    tile.pos = pos;
+    tile.size = size;
+}
+
 Player * MapSpawnPlayer(Map & map) {
     if (map.localPlayer.active == false) {
         map.localPlayer.active = true;
@@ -52,11 +58,15 @@ Enemy * MapSpawnEnemy(Map & map, EnemyType type, v2 pos) {
     }
 
     Enemy & enemy = map.enemies[map.enemyCount++];
+    enemy.active = true;
     enemy.type = type;
     enemy.pos = pos;
-    enemy.rot = 0.0f;
+    enemy.tankRot = 0.0f;
     enemy.fireCooldown = 0.0f;
     enemy.size = 25.0f;
+    enemy.remotePos = pos;
+    enemy.remoteTankRot = 0.0f;
+    enemy.remoteTurretRot = 0.0f;
     return &enemy;
 }
 
