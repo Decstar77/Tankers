@@ -37,6 +37,20 @@ Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir) {
     return &bullet;
 }
 
+Enemy * MapSpawnEnemy(Map & map, EnemyType type, v2 pos) {
+    if (map.enemyCount >= MAX_ENEMIES) {
+        return nullptr;
+    }
+
+    Enemy & enemy = map.enemies[map.enemyCount++];
+    enemy.type = type;
+    enemy.pos = pos;
+    enemy.rot = 0.0f;
+    enemy.fireCooldown = 0.0f;
+    enemy.size = 25.0f;
+    return &enemy;
+}
+
 void MapUpdate(Map & map, f32 dt) {
     // Update player fire cooldown
     map.localPlayer.fireCooldown -= dt;

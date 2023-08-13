@@ -18,7 +18,22 @@ struct Player {
     f32 size;
 };
 
+enum EnemyType {
+    ENEMY_TYPE_INVALID = 0,
+    ENEMY_TYPE_TURRET,
+    ENEMY_TYPE_COUNT,
+};
+
+struct Enemy {
+    EnemyType type;
+    v2 pos;
+    f32 rot;
+    f32 fireCooldown;
+    f32 size;
+};
+
 #define MAX_BULLETS 256
+#define MAX_ENEMIES 256
 
 struct Map {
     i32 width;
@@ -26,6 +41,9 @@ struct Map {
 
     i32 bulletCount;
     Bullet bullets[MAX_BULLETS];
+
+    i32 enemyCount;
+    Enemy enemies[MAX_ENEMIES];
 
     union {
         Player players[2];
@@ -36,8 +54,10 @@ struct Map {
     };
 };
 
-Player * MapSpawnPlayer(Map & map);
-Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir);
+Player *    MapSpawnPlayer(Map & map);
+Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir);
+Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
+
 void MapUpdate(Map & map, f32 dt);
 
 enum MapGameOverReason {

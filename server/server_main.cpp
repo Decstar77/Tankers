@@ -266,6 +266,9 @@ int main(int argc, char * argv[]) {
                         packet.mapStart.remotePlayer = *player1;
                         GameSessionSendToPeer(&sessions[i], &packet, 1, true);
 
+                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_TURRET, v2{ 200.0f, 500.0f });
+                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_TURRET, v2{ 600.0f, 500.0f });
+
                         printf("Starting game session %d\n", i);
 
                         holdingPeer = nullptr;
@@ -284,15 +287,9 @@ int main(int argc, char * argv[]) {
             PeerData * peerData = (PeerData *)event.peer->data;
             if (peerData->gameSessionIndex != -1) {
                 if (gamePacket->type == GAME_PACKET_TYPE_MAP_STREAM_DATA) {
-                    if (peerData->peerIndex == 0) {
-                        GameSessionSendToPeer(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, 1, false);
-                    }
-                    else {
-                        GameSessionSendToPeer(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, 0, false);
-                    }
+                    GameSessionSendToPeersExpect( &sessions[ peerData->gameSessionIndex ], (GamePacket *)event.packet->data, peerData->peerIndex, false );
                 }
                 else {
-
                     sessions[peerData->gameSessionIndex].incomingPackets[sessions[peerData->gameSessionIndex].packetCount++] = *gamePacket;
                 }
             } else {

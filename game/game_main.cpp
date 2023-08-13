@@ -119,8 +119,8 @@ int main(int argc, char * argv[]) {
             if (NetworkIsConnected() == false) {
                 static const char * text = "Connect";
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2, text)) {
-                    if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
-                        //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
+                    //if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
+                    if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
@@ -146,6 +146,10 @@ int main(int argc, char * argv[]) {
                     map.height = gameSettings.height;
                     map.localPlayer = packet.mapStart.localPlayer;
                     map.remotePlayer = packet.mapStart.remotePlayer;
+
+                    MapSpawnEnemy(map, ENEMY_TYPE_TURRET, v2{ 200.0f, 500.0f });
+                    MapSpawnEnemy(map, ENEMY_TYPE_TURRET, v2{ 600.0f, 500.0f });
+
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
                     isMainMenu = false;
                 } break;
@@ -214,8 +218,15 @@ int main(int argc, char * argv[]) {
             DrawPlayer(&map.localPlayer);
             DrawPlayer(&map.remotePlayer);
 
+            // DrawEnemies
+            for (i32 i = 0; i < map.enemyCount; i++) {
+                Enemy & enemy = map.enemies[i];
+                Color color = enemy.type == ENEMY_TYPE_TURRET ? DARKGRAY : BLUE;
+                DrawRectangle((int)enemy.pos.x, (int)enemy.pos.y, (int)enemy.size, (int)enemy.size, color);
+            }
+
             // Draw bullets
-            for (i32 i = 0; i < map.bulletCount; ++i) {
+            for (i32 i = 0; i < map.bulletCount; i++) {
                 Bullet & bullet = map.bullets[i];
                 DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, 5, ORANGE);
             }
