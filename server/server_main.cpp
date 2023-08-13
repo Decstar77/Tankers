@@ -19,12 +19,23 @@ static void * Allocate(size_t size) {
     return mem;
 }
 
+static void Deallocate(void * mem) {
+    free(mem);
+}
+
 static void LogTrace(const char * format, ...) {
     va_list args;
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
 }
+
+struct PeerData {
+    int gameSessionIndex;
+    int peerIndex;
+    int playerNumber;
+    char name[32];
+};
 
 struct GameSession {
     bool running;
@@ -63,10 +74,28 @@ static void GameSessionSendToPeer(GameSession * session, GamePacket * packet, in
     enet_peer_send(session->peers[peerIndex], 0, enetPacket);
 }
 
-static void GameSessionShutdown(GameSession * session) {
+static void GameSessionSendToPeersExpect(GameSession * session, GamePacket * packet, int peerIndex, bool reliable) {
+    for (int i = 0; i < 2; i++) {
+        if (i != peerIndex) {
+            GameSessionSendToPeer(session, packet, i, reliable);
+        }
+    }
+}
+
+static void GameSessionGameOverPlayerDisconnected(GameSession * session, int diconnectedPeerIndex) {
+    GamePacket packet = {};
+    packet.type = GAME_PACKET_TYPE_MAP_GAME_OVER;
+    packet.gameOver.reason = MAP_GAME_OVER_REASON_PLAYER_DISCONNECTED;
+    GameSessionSendToPeersExpect(session, &packet, diconnectedPeerIndex, true);
+
     session->running = false;
-    session->peer1 = nullptr;
-    session->peer2 = nullptr;
+    Deallocate(session->peer1->data);
+    Deallocate(session->peer2->data);
+
+    for (int i = 0; i < 2; i++) {
+        ((PeerData *)session->peers[i]->data)->gameSessionIndex = -1;
+        ((PeerData *)session->peers[i]->data)->playerNumber = -1;
+    }
 }
 
 std::atomic_bool running = true;
@@ -80,11 +109,11 @@ static void ReadServerConsole() {
             break;
         }
 
-        if (strcmp(str, "status\n") == 0){
+        if (strcmp(str, "status\n") == 0) {
             printf("Status:\n");
-            printf("Sessions running: %d\n",    GetSessionsRunningCount());
-            printf("Session tick rate: %f\n",   SESSION_TICK_RATE);
-            printf("Session tick time: %f\n",   SESSION_TICK_TIME);
+            printf("Sessions running: %d\n", GetSessionsRunningCount());
+            printf("Session tick rate: %f\n", SESSION_TICK_RATE);
+            printf("Session tick time: %f\n", SESSION_TICK_TIME);
         }
 
         ZeroMemory(str, 256);
@@ -132,13 +161,6 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> end_time;
 };
 
-struct PeerData {
-    int gameSessionIndex;
-    int peerIndex;
-    int playerNumber;
-    char name[32];
-};
-
 int main(int argc, char * argv[]) {
     if (enet_initialize() != 0) {
         fprintf(stderr, "An error occurred while initializing ENet.\n");
@@ -184,13 +206,13 @@ int main(int argc, char * argv[]) {
 
                     for (int i = 0; i < session->packetCount; i++) {
                         GamePacket & packet = session->incomingPackets[i];
-                        switch (packet.type) {  
-                            case GAME_PACKET_TYPE_MAP_PLAYER_SHOOT:{
-                                MapSpawnBullet(session->map, packet.playerShoot.pos, packet.playerShoot.dir);
+                        switch (packet.type) {
+                        case GAME_PACKET_TYPE_MAP_PLAYER_SHOOT: {
+                            MapSpawnBullet(session->map, packet.playerShoot.pos, packet.playerShoot.dir);
 
-                                GameSessionSendToPeer(session, &packet, 0, true);
-                                GameSessionSendToPeer(session, &packet, 1, true);
-                            } break;
+                            GameSessionSendToPeer(session, &packet, 0, true);
+                            GameSessionSendToPeer(session, &packet, 1, true);
+                        } break;
                         }
                     }
 
@@ -259,9 +281,9 @@ int main(int argc, char * argv[]) {
         } break;
         case ENET_EVENT_TYPE_RECEIVE: {
             GamePacket * gamePacket = (GamePacket *)event.packet->data;
-            if (gamePacket->type == GAME_PACKET_TYPE_MAP_STREAM_DATA) {
-                PeerData * peerData = (PeerData *)event.peer->data;
-                if (peerData->gameSessionIndex != -1) {
+            PeerData * peerData = (PeerData *)event.peer->data;
+            if (peerData->gameSessionIndex != -1) {
+                if (gamePacket->type == GAME_PACKET_TYPE_MAP_STREAM_DATA) {
                     if (peerData->peerIndex == 0) {
                         GameSessionSendToPeer(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, 1, false);
                     }
@@ -269,12 +291,12 @@ int main(int argc, char * argv[]) {
                         GameSessionSendToPeer(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, 0, false);
                     }
                 }
-            }
-            else {
-                PeerData * peerData = (PeerData *)event.peer->data;
-                if (peerData->gameSessionIndex != -1) {
+                else {
+
                     sessions[peerData->gameSessionIndex].incomingPackets[sessions[peerData->gameSessionIndex].packetCount++] = *gamePacket;
                 }
+            } else {
+                printf("Received packet from peer without game session\n");
             }
             enet_packet_destroy(event.packet);
         } break;
@@ -284,15 +306,17 @@ int main(int argc, char * argv[]) {
             printf("%s disconnected.\n", ip);
             PeerData * peerData = (PeerData *)event.peer->data;
             if (peerData->gameSessionIndex != -1) {
-                sessions[peerData->gameSessionIndex].running = false;
+                GameSessionGameOverPlayerDisconnected(&sessions[peerData->gameSessionIndex], peerData->peerIndex);
             }
-            event.peer->data = nullptr;
         }   break;
         case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {
             char ip[32] = {};
             enet_address_get_host_ip(&event.peer->address, ip, 32);
             printf("%s disconnected due to timeout.\n", ip);
-            event.peer->data = nullptr;
+            PeerData * peerData = (PeerData *)event.peer->data;
+            if (peerData->gameSessionIndex != -1) {
+                GameSessionGameOverPlayerDisconnected(&sessions[peerData->gameSessionIndex], peerData->peerIndex);
+            }
         } break;
         case ENET_EVENT_TYPE_NONE: {
             // Nothing happened

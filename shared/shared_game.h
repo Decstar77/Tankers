@@ -47,6 +47,15 @@ enum MapGameOverReason {
     MAP_GAME_OVER_REASON_PLAYER_LOST,
 };
 
+inline const char * MapGameOverReasonToString(MapGameOverReason reason) {
+    switch (reason) {
+    case MAP_GAME_OVER_REASON_PLAYER_DISCONNECTED: return "Player disconnected";
+    case MAP_GAME_OVER_REASON_PLAYER_WON: return "Player won";
+    case MAP_GAME_OVER_REASON_PLAYER_LOST: return "Player lost";
+    default: return "Unknown";
+    }
+}
+
 enum GamePacketType {
     GAME_PACKET_TYPE_INVALID = 0,
     GAME_PACKET_TYPE_MAP_START,

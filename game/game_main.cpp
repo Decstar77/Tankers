@@ -38,7 +38,8 @@ static GameSettings ParseConfigFileForGameSettings(Config & config) {
         }
         else if (strcmp(config.entries[i].key, "window_fullscreen") == 0) {
             settings.fullscreen = atoi(config.entries[i].value) != 0;
-        } else if (strcmp(config.entries[i].key, "server_ip") == 0) {
+        }
+        else if (strcmp(config.entries[i].key, "server_ip") == 0) {
             strcpy_s(settings.serverIp, config.entries[i].value);
         }
     }
@@ -102,6 +103,7 @@ int main(int argc, char * argv[]) {
     SetWindowPosition(gameSettings.posX, gameSettings.posY);
 
     bool isMainMenu = true;
+    bool isGameOver = false;
 
     SetTargetFPS(60);
 
@@ -118,7 +120,7 @@ int main(int argc, char * argv[]) {
                 static const char * text = "Connect";
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2, text)) {
                     if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
-                    //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
+                        //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
@@ -146,7 +148,6 @@ int main(int argc, char * argv[]) {
                     map.remotePlayer = packet.mapStart.remotePlayer;
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
                     isMainMenu = false;
-
                 } break;
                 case GAME_PACKET_TYPE_MAP_PLAYER_SHOOT: {
                     MapSpawnBullet(map, packet.playerShoot.pos, packet.playerShoot.dir);
@@ -155,11 +156,15 @@ int main(int argc, char * argv[]) {
                     map.remotePlayer.remotePos = packet.streamData.pos;
                     map.remotePlayer.remoteRot = packet.streamData.rot;
                 } break;
+                case GAME_PACKET_TYPE_MAP_GAME_OVER: {
+                    printf("Game over, reason: %s\n", MapGameOverReasonToString(packet.gameOver.reason));
+                    isGameOver = true;
+                } break;
                 }
             }
         }
 
-        if (isMainMenu == false) {
+        if (isMainMenu == false && isGameOver == false) {
             float deltaTime = GetFrameTime();
             accumulator += deltaTime;
 
@@ -214,6 +219,15 @@ int main(int argc, char * argv[]) {
                 Bullet & bullet = map.bullets[i];
                 DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, 5, ORANGE);
             }
+        }
+
+        if (isGameOver) {
+            const char * text = "Game over restart the game sloot!";
+            Vector2 textSize = MeasureTextEx(GetFontDefault(), text, 20, 1);
+            Vector2 centerPos = {};
+            centerPos.x = gameSettings.width / 2 - textSize.x / 2;
+            centerPos.y = gameSettings.height / 2 - textSize.y / 2;
+            DrawText(text, (int)centerPos.x, (int)centerPos.y, 20, BLACK);
         }
 
         std::string fps = "FPS: " + std::to_string(GetFPS());
