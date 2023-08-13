@@ -14,8 +14,10 @@ struct Player {
     i32 playerNumber;
     v2 remotePos;
     v2 pos;
-    f32 remoteRot;
-    f32 rot;
+    f32 tankRot;
+    f32 remoteTankRot;
+    f32 turretRot;
+    f32 remoteTurretRot;
     f32 fireCooldown;
     f32 size;
 };
@@ -59,7 +61,7 @@ Player *    MapSpawnPlayer(Map & map);
 Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir);
 Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
 
-void MapUpdate(Map & map, f32 dt);
+void        MapUpdate(Map & map, f32 dt);
 
 enum MapGameOverReason {
     MAP_GAME_OVER_REASON_INVALID = 0,
@@ -95,7 +97,8 @@ struct GamePacket {
         } mapStart;
         struct {
             v2 pos;
-            f32 rot;
+            f32 tankRot;
+            f32 turretRot;
         } playerStreamData;
         struct {
             v2 pos;

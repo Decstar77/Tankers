@@ -5,7 +5,23 @@
 
 void LocalPlayerMove(Map & map, Player * player, v2 dir) {
     f32 speed = 1.0f;
-    player->pos = player->pos + dir * speed;
+
+    if (RoughlyZero(dir)) {
+        return;
+    }
+
+    dir = Normalize(dir);
+    v2 currentDir = { cosf(player->tankRot), sinf(player->tankRot) };
+    f32 angle = SignedAngle(currentDir, dir);
+    if (fabsf(angle) > 0.1f) {
+        player->tankRot += angle * 0.1f;
+    }
+    else {
+        player->tankRot = atan2f(dir.y, dir.x);
+    }
+
+    currentDir = { cosf(player->tankRot), sinf(player->tankRot) };
+    player->pos = player->pos + currentDir * speed;
 
     // Wrap player movement
     if (player->pos.x < player->size) {
@@ -14,7 +30,7 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
     else if (player->pos.x > map.width - player->size) {
         player->pos.x = map.width - player->size;
     }
-    if (player->pos.y < player->size){
+    if (player->pos.y < player->size) {
         player->pos.y = player->size;
     }
     else if (player->pos.y > map.height - player->size) {
@@ -24,7 +40,7 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
 
 void LocalPlayerLook(Map & map, Player * player, v2 point) {
     v2 dir = point - player->pos;
-    player->rot = atan2f(dir.y, dir.x);
+    player->turretRot = atan2f(dir.y, dir.x);
 }
 
 void LocalPlayerShoot(Map & map, Player * player) {
@@ -34,11 +50,11 @@ void LocalPlayerShoot(Map & map, Player * player) {
 
     player->fireCooldown = 0.2f;
 
-    v2 dir = { cosf(player->rot), sinf(player->rot) };
+    v2 dir = { cosf(player->turretRot), sinf(player->turretRot) };
     LocalMapSpawnBullet(map, player->pos, dir);
 }
 
-void LocalMapSpawnBullet(Map & map, v2 pos, v2 dir){
+void LocalMapSpawnBullet(Map & map, v2 pos, v2 dir) {
     GamePacket packet = {};
     packet.type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;
     packet.shotFired.pos = pos;
@@ -46,10 +62,11 @@ void LocalMapSpawnBullet(Map & map, v2 pos, v2 dir){
     NetworkSendPacket(packet, true);
 }
 
-void LocalSendStreamData(Map & map){
+void LocalSendStreamData(Map & map) {
     GamePacket packet = {};
     packet.type = GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA;
     packet.playerStreamData.pos = map.localPlayer.pos;
-    packet.playerStreamData.rot = map.localPlayer.rot;
+    packet.playerStreamData.tankRot = map.localPlayer.tankRot;
+    packet.playerStreamData.turretRot = map.localPlayer.turretRot;
     NetworkSendPacket(packet, false);
 }

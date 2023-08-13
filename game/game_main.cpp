@@ -49,12 +49,19 @@ static GameSettings ParseConfigFileForGameSettings(Config & config) {
 
 static Config cfg = {};
 
+static void DrawTank(v2 p, f32 size, f32 r, Color c) {
+    Rectangle rect = { p.x, p.y, size, size };
+    Vector2 origin = { size / 2, size / 2 };
+    DrawRectanglePro(rect, origin, RadToDeg(r), c);
+}
+
 static void DrawPlayer(Player * player) {
     Color color = player->playerNumber == 1 ? RED : BLUE;
-    DrawCircle((int)player->pos.x, (int)player->pos.y, player->size, color);
+    DrawTank(player->pos, player->size, player->tankRot, color);
+    //DrawCircle((int)player->pos.x, (int)player->pos.y, player->size, color);
     f32 gunRad = 15;
     Vector2 start = { player->pos.x, player->pos.y };
-    Vector2 end = { player->pos.x + gunRad * cosf(player->rot), player->pos.y + gunRad * sinf(player->rot) };
+    Vector2 end = { player->pos.x + gunRad * cosf(player->turretRot), player->pos.y + gunRad * sinf(player->turretRot) };
     DrawLineEx(start, end, 2.0f, BLACK);
 }
 
@@ -119,8 +126,8 @@ int main(int argc, char * argv[]) {
             if (NetworkIsConnected() == false) {
                 static const char * text = "Connect";
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2, text)) {
-                    //if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
-                    if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
+                    if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
+                        //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
@@ -158,7 +165,8 @@ int main(int argc, char * argv[]) {
                 } break;
                 case GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA: {
                     map.remotePlayer.remotePos = packet.playerStreamData.pos;
-                    map.remotePlayer.remoteRot = packet.playerStreamData.rot;
+                    map.remotePlayer.remoteTankRot = packet.playerStreamData.tankRot;
+                    map.remotePlayer.remoteTurretRot = packet.playerStreamData.turretRot;
                 } break;
                 case GAME_PACKET_TYPE_MAP_GAME_OVER: {
                     printf("Game over, reason: %s\n", MapGameOverReasonToString(packet.gameOver.reason));
@@ -210,7 +218,8 @@ int main(int argc, char * argv[]) {
             }
 
             map.remotePlayer.pos = Lerp(map.remotePlayer.pos, map.remotePlayer.remotePos, 0.1f);
-            map.remotePlayer.rot = Lerp(map.remotePlayer.rot, map.remotePlayer.remoteRot, 0.1f);
+            map.remotePlayer.tankRot = Lerp(map.remotePlayer.tankRot, map.remotePlayer.remoteTankRot, 0.1f);
+            map.remotePlayer.turretRot = Lerp(map.remotePlayer.turretRot, map.remotePlayer.remoteTurretRot, 0.1f);
 
             DrawPlayer(&map.localPlayer);
             DrawPlayer(&map.remotePlayer);

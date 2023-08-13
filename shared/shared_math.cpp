@@ -41,3 +41,24 @@ v2 Lerp(v2 a, v2 b, f32 t) {
 v2 Reflect(v2 v, v2 n) {
     return v - 2.0f * Dot(v, n) * n;
 }
+
+f32 SignedAngle(v2 a, v2 b) {
+    f32 angle = atan2f(b.y, b.x) - atan2f(a.y, a.x);
+    if (angle < -PI) {
+        angle += 2.0f * PI;
+    }
+    else if (angle > PI) {
+        angle -= 2.0f * PI;
+    }
+    return angle;
+}
+
+bool RoughlyEqual(v2 a, v2 b, f32 epsilon) {
+    return fabsf(a.x - b.x) < epsilon && fabsf(a.y - b.y) < epsilon;
+}
+
+bool RoughlyZero(v2 a, f32 epsilon) {
+    return fabsf(a.x) < epsilon && fabsf(a.y) < epsilon;
+}
+
+

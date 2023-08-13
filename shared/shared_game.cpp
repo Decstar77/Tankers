@@ -9,9 +9,10 @@ Player * MapSpawnPlayer(Map & map) {
         map.localPlayer.active = true;
         map.localPlayer.playerNumber = 1;
         map.localPlayer.pos = { 100.0f, 100.0f };
-        map.localPlayer.rot = 0.0f;
+        map.localPlayer.tankRot = 0.0f;
+        map.localPlayer.turretRot = 0.0f;
         map.localPlayer.fireCooldown = 0.0f;
-        map.localPlayer.size = 10.0f;
+        map.localPlayer.size = 25.0f;
         return &map.localPlayer;
     }
 
@@ -19,9 +20,10 @@ Player * MapSpawnPlayer(Map & map) {
         map.remotePlayer.active = true;
         map.remotePlayer.playerNumber = 2;
         map.remotePlayer.pos = { 200.0f, 200.0f };
-        map.remotePlayer.rot = 0.0f;
+        map.remotePlayer.tankRot = 0.0f;
+        map.remotePlayer.turretRot = 0.0f;
         map.remotePlayer.fireCooldown = 0.0f;
-        map.remotePlayer.size = 10.0f;
+        map.remotePlayer.size = 25.0f;
         return &map.remotePlayer;
     }
 
