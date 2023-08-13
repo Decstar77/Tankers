@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <math.h>
+#include <cstring> // For ubuntu
 
 Player * MapSpawnPlayer(Map & map) {
     if (map.localPlayer.active == false) {
