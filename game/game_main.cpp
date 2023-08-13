@@ -119,8 +119,8 @@ int main(int argc, char * argv[]) {
             if (NetworkIsConnected() == false) {
                 static const char * text = "Connect";
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2, text)) {
-                    //if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
-                    if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
+                    if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
+                        //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
@@ -197,7 +197,6 @@ int main(int argc, char * argv[]) {
                 if (moved) {
                     LocalPlayerMove(map, &map.localPlayer, dir);
                 }
-
                 Vector2 p = GetMousePosition();
                 LocalPlayerLook(map, &map.localPlayer, { p.x, p.y });
 
@@ -226,9 +225,11 @@ int main(int argc, char * argv[]) {
             }
 
             // Draw bullets
-            for (i32 i = 0; i < map.bulletCount; i++) {
+            for (i32 i = 0; i < MAX_BULLETS; i++) {
                 Bullet & bullet = map.bullets[i];
-                DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, 5, ORANGE);
+                if (bullet.active) {
+                    DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, 5, ORANGE);
+                }
             }
         }
 

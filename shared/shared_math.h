@@ -16,9 +16,14 @@ v2 operator+(v2 a, v2 b);
 v2 operator-(v2 a, v2 b);
 v2 operator*(v2 a, f32 b);
 v2 operator/(v2 a, f32 b);
+v2 operator*(f32 a, v2 b);
+v2 operator/(f32 a, v2 b);
 
-v2 Normalize(v2 v);
-v2 Lerp(v2 a, v2 b, f32 t);
+
+f32 Dot(v2 a, v2 b);
+v2  Normalize(v2 v);
+v2  Lerp(v2 a, v2 b, f32 t);
+v2  Reflect(v2 v, v2 n);
 
 
 

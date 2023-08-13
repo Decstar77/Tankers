@@ -3,6 +3,8 @@
 #include "shared_math.h"
 
 struct Bullet {
+    bool active;
+    bool bounced;
     v2 pos;
     v2 dir;
 };
@@ -39,7 +41,6 @@ struct Map {
     i32 width;
     i32 height;
 
-    i32 bulletCount;
     Bullet bullets[MAX_BULLETS];
 
     i32 enemyCount;

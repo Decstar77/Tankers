@@ -1,5 +1,6 @@
 #include "shared_game.h"
 
+#include <memory>
 #include <math.h>
 
 Player * MapSpawnPlayer(Map & map) {
@@ -27,14 +28,19 @@ Player * MapSpawnPlayer(Map & map) {
 }
 
 Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir) {
-    if (map.bulletCount >= MAX_BULLETS) {
-        return nullptr;
+    for (i32 i = 0; i < MAX_BULLETS; i++) {
+        Bullet & bullet = map.bullets[i];
+        if (bullet.active == false) {
+            ZeroStruct(bullet);
+            bullet.active = true;
+            bullet.bounced = false;
+            bullet.pos = pos;
+            bullet.dir = dir;
+            return &bullet;
+        }
     }
 
-    Bullet & bullet = map.bullets[map.bulletCount++];
-    bullet.pos = pos;
-    bullet.dir = dir;
-    return &bullet;
+    return nullptr;
 }
 
 Enemy * MapSpawnEnemy(Map & map, EnemyType type, v2 pos) {
@@ -56,9 +62,25 @@ void MapUpdate(Map & map, f32 dt) {
     map.localPlayer.fireCooldown -= dt;
     map.remotePlayer.fireCooldown -= dt;
 
-    for (i32 i = 0; i < map.bulletCount; ++i) {
+    for (i32 i = 0; i < MAX_BULLETS; i++) {
         Bullet & bullet = map.bullets[i];
-        bullet.pos = bullet.pos + bullet.dir * 10.0f;
+        if (bullet.active) {
+            bullet.pos = bullet.pos + bullet.dir * 10.0f;
+            if (bullet.pos.x < 0.0f || bullet.pos.x > map.width || bullet.pos.y < 0.0f || bullet.pos.y > map.height) {
+                if (bullet.bounced == false) {
+                    bullet.bounced = true;
+                    if (bullet.pos.x < 0.0f || bullet.pos.x > map.width) {
+                        bullet.dir.x = -bullet.dir.x;
+                    }
+                    if (bullet.pos.y < 0.0f || bullet.pos.y > map.height) {
+                        bullet.dir.y = -bullet.dir.y;
+                    }
+                }
+                else {
+                    bullet.active = false;
+                }
+            }
+        }
     }
 }
 
