@@ -80,9 +80,10 @@ inline const char * MapGameOverReasonToString(MapGameOverReason reason) {
 enum GamePacketType {
     GAME_PACKET_TYPE_INVALID = 0,
     GAME_PACKET_TYPE_MAP_START,
-    GAME_PACKET_TYPE_MAP_STREAM_DATA,
-    GAME_PACKET_TYPE_MAP_PLAYER_SHOOT,
+    GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA,
+    GAME_PACKET_TYPE_MAP_SHOT_FIRED,
     GAME_PACKET_TYPE_MAP_GAME_OVER,
+    GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA,
 };
 
 struct GamePacket {
@@ -93,18 +94,34 @@ struct GamePacket {
             Player remotePlayer;
         } mapStart;
         struct {
-            i32 playerNumber;
             v2 pos;
             f32 rot;
-        } streamData;
+        } playerStreamData;
         struct {
             v2 pos;
             v2 dir;
-        } playerShoot;
+        } shotFired;
         struct {
             MapGameOverReason reason;
         } gameOver;
+        struct {
+            //i32 entityCount;
+            //i32 indices[20];
+            //v2  pos[20];
+            //f32 rot[20];
+        } entityStreamData;
     };
 };
 
-void GamePacketCreateStreamData(GamePacket & packet, Map & map);
+// Setting values
+constexpr i32 GAME_TICKS_PER_SECOND = 60;
+constexpr i32 GAME_MAX_BYTES_PER_MS = 30; 
+
+// Calculated values
+constexpr f32 GAME_TICKS_PER_MS = (f32)GAME_TICKS_PER_SECOND / 1000.0f;
+constexpr i32 GAME_PACKET_SIZE_BYTES = sizeof(GamePacket);
+constexpr f32 GAME_MS_PER_TICK = 1.0f / GAME_TICKS_PER_MS;
+constexpr f32 GAME_BYTES_PER_TICK = GAME_MS_PER_TICK * GAME_MAX_BYTES_PER_MS;
+
+// Checks
+static_assert(GAME_PACKET_SIZE_BYTES <= GAME_BYTES_PER_TICK , "Game packet size is too large");

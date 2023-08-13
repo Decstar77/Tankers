@@ -153,12 +153,12 @@ int main(int argc, char * argv[]) {
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
                     isMainMenu = false;
                 } break;
-                case GAME_PACKET_TYPE_MAP_PLAYER_SHOOT: {
-                    MapSpawnBullet(map, packet.playerShoot.pos, packet.playerShoot.dir);
+                case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
+                    MapSpawnBullet(map, packet.shotFired.pos, packet.shotFired.dir);
                 } break;
-                case GAME_PACKET_TYPE_MAP_STREAM_DATA: {
-                    map.remotePlayer.remotePos = packet.streamData.pos;
-                    map.remotePlayer.remoteRot = packet.streamData.rot;
+                case GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA: {
+                    map.remotePlayer.remotePos = packet.playerStreamData.pos;
+                    map.remotePlayer.remoteRot = packet.playerStreamData.rot;
                 } break;
                 case GAME_PACKET_TYPE_MAP_GAME_OVER: {
                     printf("Game over, reason: %s\n", MapGameOverReasonToString(packet.gameOver.reason));
@@ -204,9 +204,7 @@ int main(int argc, char * argv[]) {
                     LocalPlayerShoot(map, &map.localPlayer);
                 }
 
-                GamePacket packet = {};
-                GamePacketCreateStreamData(packet, map);
-                NetworkSendPacket(packet, false);
+                LocalSendStreamData(map);
 
                 MapUpdate(map, tickTime);
             }

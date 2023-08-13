@@ -207,8 +207,8 @@ int main(int argc, char * argv[]) {
                     for (int i = 0; i < session->packetCount; i++) {
                         GamePacket & packet = session->incomingPackets[i];
                         switch (packet.type) {
-                        case GAME_PACKET_TYPE_MAP_PLAYER_SHOOT: {
-                            MapSpawnBullet(session->map, packet.playerShoot.pos, packet.playerShoot.dir);
+                        case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
+                            MapSpawnBullet(session->map, packet.shotFired.pos, packet.shotFired.dir);
 
                             GameSessionSendToPeer(session, &packet, 0, true);
                             GameSessionSendToPeer(session, &packet, 1, true);
@@ -286,7 +286,7 @@ int main(int argc, char * argv[]) {
             GamePacket * gamePacket = (GamePacket *)event.packet->data;
             PeerData * peerData = (PeerData *)event.peer->data;
             if (peerData->gameSessionIndex != -1) {
-                if (gamePacket->type == GAME_PACKET_TYPE_MAP_STREAM_DATA) {
+                if (gamePacket->type == GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA) {
                     GameSessionSendToPeersExpect( &sessions[ peerData->gameSessionIndex ], (GamePacket *)event.packet->data, peerData->peerIndex, false );
                 }
                 else {

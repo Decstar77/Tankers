@@ -40,8 +40,16 @@ void LocalPlayerShoot(Map & map, Player * player) {
 
 void LocalMapSpawnBullet(Map & map, v2 pos, v2 dir){
     GamePacket packet = {};
-    packet.type = GAME_PACKET_TYPE_MAP_PLAYER_SHOOT;
-    packet.playerShoot.pos = pos;
-    packet.playerShoot.dir = dir;
+    packet.type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;
+    packet.shotFired.pos = pos;
+    packet.shotFired.dir = dir;
     NetworkSendPacket(packet, true);
+}
+
+void LocalSendStreamData(Map & map){
+    GamePacket packet = {};
+    packet.type = GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA;
+    packet.playerStreamData.pos = map.localPlayer.pos;
+    packet.playerStreamData.rot = map.localPlayer.rot;
+    NetworkSendPacket(packet, false);
 }

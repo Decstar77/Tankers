@@ -83,10 +83,3 @@ void MapUpdate(Map & map, f32 dt) {
         }
     }
 }
-
-void GamePacketCreateStreamData(GamePacket & packet, Map & map) {
-    packet.type = GAME_PACKET_TYPE_MAP_STREAM_DATA;
-    packet.streamData.playerNumber = map.localPlayer.playerNumber;
-    packet.streamData.pos = map.localPlayer.pos;
-    packet.streamData.rot = map.localPlayer.rot;
-}
