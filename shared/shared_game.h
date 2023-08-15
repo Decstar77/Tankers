@@ -59,6 +59,10 @@ struct Enemy {
 struct MapTile {
     v2 pos;
     f32 size;
+    i32 flatIndex;
+    i32 xIndex;
+    i32 yIndex;
+    Rect rect;
 };
 
 #define MAX_BULLETS 256
@@ -74,7 +78,10 @@ struct Map {
     i32 enemyCount;
     Enemy enemies[MAX_ENEMIES];
 
+    i32 tileSize;
     i32 tileCount;
+    i32 tilesHCount;
+    i32 tilesVCount;
     MapTile tiles[MAX_MAP_TILES];
 
     union {
@@ -86,11 +93,14 @@ struct Map {
     };
 };
 
-void        MapAddTile(Map & map, v2 pos, f32 size);
+Circle      PlayerGetCollider(Player * player);
+
+void        MapStart(Map & map);
 
 Player *    MapSpawnPlayer(Map & map);
 Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir);
 Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
+MapTile *   MapGetTileAtPos(Map & map, v2 pos);
 
 void        MapUpdate(Map & map, f32 dt);
 
@@ -150,7 +160,7 @@ struct GamePacket {
 
 // Setting values
 constexpr i32 GAME_TICKS_PER_SECOND = 30;
-constexpr i32 GAME_MAX_BYTES_PER_MS = 30; 
+constexpr i32 GAME_MAX_BYTES_PER_MS = 30;
 
 // Calculated values
 constexpr f32 GAME_TICK_TIME = 1.0f / (f32)GAME_TICKS_PER_SECOND;
@@ -160,4 +170,4 @@ constexpr f32 GAME_MS_PER_TICK = 1.0f / GAME_TICKS_PER_MS;
 constexpr f32 GAME_BYTES_PER_TICK = GAME_MS_PER_TICK * GAME_MAX_BYTES_PER_MS;
 
 // Checks
-static_assert(GAME_PACKET_SIZE_BYTES <= GAME_BYTES_PER_TICK , "Game packet size is too large");
+static_assert(GAME_PACKET_SIZE_BYTES <= GAME_BYTES_PER_TICK, "Game packet size is too large");

@@ -4,10 +4,40 @@
 #include <math.h>
 #include <cstring> // For ubuntu
 
-void MapAddTile(Map & map, v2 pos, f32 size) {
+Circle PlayerGetCollider(Player * player) {
+    return { player->pos, player->size / 2.0f };
+}
+
+static void MapAddTile(Map & map, i32 x, i32 y) {
+    if (map.tileCount >= MAX_MAP_TILES) {
+        return;
+    }
+    if (x < 0 || x >= map.tilesHCount || y < 0 || y >= map.tilesVCount) {
+        return;
+    }
+
     MapTile & tile = map.tiles[map.tileCount++];
-    tile.pos = pos;
-    tile.size = size;
+    tile.xIndex = x;
+    tile.yIndex = y;
+    tile.flatIndex = y * map.tilesHCount + x;
+    tile.pos = { (f32)x * map.tileSize, (f32)y * map.tileSize };
+    tile.size = (f32)map.tileSize;
+    tile.rect = { tile.pos, tile.pos + v2{ tile.size, tile.size } };
+}
+
+void MapStart(Map & map) {
+    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
+    //MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
+
+    map.tileSize = 50;
+    map.tilesHCount = map.width / map.tileSize;
+    map.tilesVCount = map.height / map.tileSize;
+
+    MapAddTile(map, 0, 0);
+
+    for (i32 x = 2; x < 14; x++) {
+        MapAddTile(map, x, 5);
+    }
 }
 
 Player * MapSpawnPlayer(Map & map) {
@@ -70,6 +100,16 @@ Enemy * MapSpawnEnemy(Map & map, EnemyType type, v2 pos) {
     return &enemy;
 }
 
+MapTile * MapGetTileAtPos(Map & map, v2 pos) {
+    i32 x = (i32)(pos.x / map.tileSize);
+    i32 y = (i32)(pos.y / map.tileSize);
+    i32 flatIndex = y * map.tilesHCount + x;
+    if (flatIndex < 0 || flatIndex >= map.tileCount) {
+        return nullptr;
+    }
+    return &map.tiles[flatIndex];
+}
+
 void MapUpdate(Map & map, f32 dt) {
     // Update player fire cooldown
     map.localPlayer.fireCooldown -= dt;
@@ -77,8 +117,28 @@ void MapUpdate(Map & map, f32 dt) {
 
     for (i32 i = 0; i < MAX_BULLETS; i++) {
         Bullet & bullet = map.bullets[i];
+        f32 bulletSpeed = 10;
         if (bullet.active) {
-            bullet.pos = bullet.pos + bullet.dir * 10.0f;
+            v2 bv = bullet.dir * bulletSpeed;
+
+            Circle bulletCollider = { bullet.pos, 5.0f };
+            for (i32 tileIndex = 0; tileIndex < map.tileCount; tileIndex++) {
+                MapTile & tile = map.tiles[tileIndex];
+                SweepResult sweep;
+                if (SweepCircleVsRect(bulletCollider, bv, tile.rect, {}, &sweep)) {
+                    if (bullet.bounced == false) {
+                        bullet.bounced = true;
+                        bullet.pos = bullet.pos + bv * sweep.t;
+                        bullet.dir = Reflect(bullet.dir, sweep.normal);
+                        bv = bullet.dir * bulletSpeed;
+                    }
+                    else {
+                        bullet.active = false;
+                    }
+                }
+            }
+
+            bullet.pos = bullet.pos + bv;
             if (bullet.pos.x < 0.0f || bullet.pos.x > map.width || bullet.pos.y < 0.0f || bullet.pos.y > map.height) {
                 if (bullet.bounced == false) {
                     bullet.bounced = true;
@@ -93,6 +153,40 @@ void MapUpdate(Map & map, f32 dt) {
                     bullet.active = false;
                 }
             }
+
+            // CollisionManifold closestManifold = {};
+            // Circle bulletCollider = { bullet.pos, 5.0f };
+            // for (i32 tileIndex = 0; tileIndex < map.tileCount; tileIndex++) {
+            //     MapTile & tile = map.tiles[tileIndex];
+            //     CollisionManifold manifold = {};
+            //     if (CircleVsRect(bulletCollider, tile.rect, &manifold)) {
+            //         if (manifold.penetration > closestManifold.penetration) {
+            //             closestManifold = manifold;
+            //         }
+            //     }
+            // }
+
+            // if (closestManifold.penetration > 0) {
+            //     if (bullet.bounced == false) {
+            //         bullet.bounced = true;
+            //         bullet.dir = Reflect(bullet.dir, closestManifold.normal);
+            //         bullet.pos = bullet.pos + closestManifold.normal * closestManifold.penetration;
+            //     }
+            //     else {
+            //         bullet.active = false;
+            //     }
+            // }
+
+            // for (i32 j = 0; j < MAX_ENEMIES; j++) {
+            //     Enemy & enemy = map.enemies[j];
+            //     if (enemy.active) {
+            //         Circle enemyCollider = { enemy.pos, enemy.size / 2.0f };
+            //         if (CircleVsCircle(bulletCollider, enemyCollider)) {
+            //             bullet.active = false;
+            //             enemy.active = false;
+            //         }
+            //     }
+            // }
         }
     }
 }

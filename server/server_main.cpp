@@ -247,6 +247,8 @@ int main(int argc, char * argv[]) {
                         }
                     }
 
+                    MapUpdate(session->map, GAME_TICK_TIME);
+
                     GamePacket packet = {};
                     packet.type = GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA;
                     packet.entityStreamData.entityCount = map.enemyCount;
@@ -260,7 +262,6 @@ int main(int argc, char * argv[]) {
 
                     GameSessionSendToAllPeers(session, &packet, false);
 
-                    MapUpdate(session->map, GAME_TICK_TIME);
                     session->tickNumber++;
                 }
             }
@@ -312,8 +313,7 @@ int main(int argc, char * argv[]) {
                         packet.mapStart.remotePlayer = *player1;
                         GameSessionSendToPeer(&sessions[i], &packet, 1, true);
 
-                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
-                        MapSpawnEnemy(sessions[i].map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
+                        MapStart(sessions[i].map);
 
                         printf("Starting game session %d\n", i);
 

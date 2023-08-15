@@ -4,7 +4,7 @@
 #include <math.h>
 
 void LocalPlayerMove(Map & map, Player * player, v2 dir) {
-    f32 speed = 1.0f;
+    f32 speed = 2.23f;
 
     if (RoughlyZero(dir)) {
         return;
@@ -35,6 +35,15 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
     }
     else if (player->pos.y > map.height - player->size) {
         player->pos.y = map.height - player->size;
+    }
+
+    Circle c = PlayerGetCollider(player);
+    for (i32 i = 0; i < map.tileCount; i++) {
+        MapTile & tile = map.tiles[i];
+        CollisionManifold manifold = {};
+        if (CircleVsRect(c, tile.rect, &manifold)) {
+            player->pos = player->pos + manifold.normal * manifold.penetration;
+        }
     }
 }
 

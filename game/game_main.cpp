@@ -58,6 +58,11 @@ static void DrawTank(v2 p, f32 size, f32 r, f32 tr, Color c) {
     Vector2 start = { p.x, p.y };
     Vector2 end = { p.x + gunRad * cosf(tr), p.y + gunRad * sinf(tr) };
     DrawLineEx(start, end, 2.0f, BLACK);
+
+#if 0
+    // Draw the colliders
+    DrawCircle((int)p.x, (int)p.y, (int)size / 2.0f, Fade(RED, 0.5f));
+#endif
 }
 
 static void DrawPlayer(Player * player) {
@@ -96,7 +101,7 @@ static bool DrawButton(i32 centerX, i32 centerY, const char * text) {
 
 int main(int argc, char * argv[]) {
 
-    const char * iniPath = "bin/player_one.ini";
+    const char * iniPath = "player_one.ini";
     if (argc == 2) {
         iniPath = argv[1];
     }
@@ -121,6 +126,9 @@ int main(int argc, char * argv[]) {
 
     bool isMainMenu = true;
     bool isGameOver = false;
+    bool isSinglePlayer = false;
+
+    bool debugPauseSim = false;
 
     SetTargetFPS(60);
 
@@ -138,6 +146,16 @@ int main(int argc, char * argv[]) {
                         //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
+                }
+                if (DrawButton(gameSettings.width / 2, gameSettings.height / 2 - 100, "Single Pringle")) {
+                    ZeroStruct(map);
+                    map.width = gameSettings.width;
+                    map.height = gameSettings.height;
+                    MapSpawnPlayer(map);
+                    MapSpawnPlayer(map);
+                    MapStart(map);
+                    isMainMenu = false;
+                    isSinglePlayer = true;
                 }
             }
             else {
@@ -162,8 +180,7 @@ int main(int argc, char * argv[]) {
                     map.localPlayer = packet.mapStart.localPlayer;
                     map.remotePlayer = packet.mapStart.remotePlayer;
 
-                    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
-                    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
+                    MapStart(map);
 
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
                     isMainMenu = false;
@@ -197,45 +214,73 @@ int main(int argc, char * argv[]) {
                 shouldShoot = true;
             }
 
-            float deltaTime = GetFrameTime();
-            accumulator += deltaTime;
+            if (IsKeyPressed(KEY_F1)) {
+                debugPauseSim = !debugPauseSim;
+            }
 
-            while (accumulator >= GAME_TICK_TIME) {
-                accumulator -= GAME_TICK_TIME;
+            bool debugStepOne = false;
+            if (IsKeyPressed(KEY_F2)) {
+                debugStepOne = true;
+            }
 
-                v2 dir = {};
-                bool moved = false;
-                if (IsKeyDown(KEY_W)) {
-                    dir.y += -1.0f;
-                    moved = true;
-                }
-                if (IsKeyDown(KEY_S)) {
-                    dir.y += 1.0f;
-                    moved = true;
-                }
-                if (IsKeyDown(KEY_A)) {
-                    dir.x += -1.0f;
-                    moved = true;
-                }
-                if (IsKeyDown(KEY_D)) {
-                    dir.x += 1.0f;
-                    moved = true;
-                }
+            if (debugPauseSim == false || debugStepOne == true) {
+                float deltaTime = GetFrameTime();
+                accumulator += deltaTime;
 
-                if (moved) {
-                    LocalPlayerMove(map, &map.localPlayer, dir);
+                while (accumulator >= GAME_TICK_TIME) {
+                    accumulator -= GAME_TICK_TIME;
+
+                    v2 dir = {};
+                    bool moved = false;
+                    if (IsKeyDown(KEY_W)) {
+                        dir.y += -1.0f;
+                        moved = true;
+                    }
+                    if (IsKeyDown(KEY_S)) {
+                        dir.y += 1.0f;
+                        moved = true;
+                    }
+                    if (IsKeyDown(KEY_A)) {
+                        dir.x += -1.0f;
+                        moved = true;
+                    }
+                    if (IsKeyDown(KEY_D)) {
+                        dir.x += 1.0f;
+                        moved = true;
+                    }
+
+                    if (moved) {
+                        LocalPlayerMove(map, &map.localPlayer, dir);
+                    }
+                    Vector2 p = GetMousePosition();
+                    LocalPlayerLook(map, &map.localPlayer, { p.x, p.y });
+
+                    if (shouldShoot) {
+                        LocalPlayerShoot(map, &map.localPlayer);
+                        shouldShoot = false;
+                    }
+
+                    LocalSendStreamData(map);
+                    if (isSinglePlayer) {
+                        for (int i = 0; i < map.enemyCount; i++) {
+                            Enemy & enemy = map.enemies[i];
+                            if (enemy.active) {
+                                enemy.fireCooldown -= GAME_TICK_TIME;
+
+                                v2 toPlayer = map.localPlayer.pos - enemy.pos;
+                                enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
+
+                                if (enemy.fireCooldown <= 0.0f) {
+                                    enemy.fireCooldown = 1.5f;
+                                    v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
+                                    MapSpawnBullet(map, enemy.pos, dir);
+                                }
+                            }
+                        }
+                    }
+
+                    MapUpdate(map, GAME_TICK_TIME);
                 }
-                Vector2 p = GetMousePosition();
-                LocalPlayerLook(map, &map.localPlayer, { p.x, p.y });
-
-                if (shouldShoot) {
-                    LocalPlayerShoot(map, &map.localPlayer);
-                    shouldShoot = false;
-                }
-
-                LocalSendStreamData(map);
-
-                MapUpdate(map, GAME_TICK_TIME);
             }
 
             map.remotePlayer.pos = Lerp(map.remotePlayer.pos, map.remotePlayer.remotePos, 0.1f);
@@ -255,6 +300,13 @@ int main(int argc, char * argv[]) {
             // DrawEnemies
             for (i32 i = 0; i < map.enemyCount; i++) {
                 DrawEnemy(&map.enemies[i]);
+            }
+
+            for (i32 i = 0; i < map.tileCount; i++) {
+                MapTile & tile = map.tiles[i];
+                Rect r = tile.rect;
+                Rectangle rect = { r.min.x, r.min.y, r.max.x - r.min.x, r.max.y - r.min.y };
+                DrawRectangleRec(rect, DARKGRAY);
             }
 
             // Draw bullets
