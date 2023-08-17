@@ -2,8 +2,17 @@
 
 #include "shared_math.h"
 
+enum BulletType {
+    BULLET_TYPE_INVALID = 0,
+    BULLET_TYPE_NORMAL,
+    BULLET_TYPE_ROCKET,
+    BULLET_TYPE_MINE,
+    BULLET_TYPE_COUNT,
+};
+
 struct Bullet {
     bool active;
+    BulletType type;
     bool bounced;
     v2 pos;
     v2 dir;
@@ -98,7 +107,7 @@ Circle      PlayerGetCollider(Player * player);
 void        MapStart(Map & map);
 
 Player *    MapSpawnPlayer(Map & map);
-Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir);
+Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type);
 Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
 MapTile *   MapGetTileAtPos(Map & map, v2 pos);
 

@@ -186,7 +186,7 @@ int main(int argc, char * argv[]) {
                     isMainMenu = false;
                 } break;
                 case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
-                    MapSpawnBullet(map, packet.shotFired.pos, packet.shotFired.dir);
+                    MapSpawnBullet(map, packet.shotFired.pos, packet.shotFired.dir, BULLET_TYPE_NORMAL);
                 } break;
                 case GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA: {
                     map.remotePlayer.remotePos = packet.playerStreamData.pos;
@@ -273,7 +273,7 @@ int main(int argc, char * argv[]) {
                                 if (enemy.fireCooldown <= 0.0f) {
                                     enemy.fireCooldown = 1.5f;
                                     v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
-                                    MapSpawnBullet(map, enemy.pos, dir);
+                                    MapSpawnBullet(map, enemy.pos, dir, BULLET_TYPE_NORMAL);
                                 }
                             }
                         }

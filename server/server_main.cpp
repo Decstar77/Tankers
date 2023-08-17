@@ -213,7 +213,7 @@ int main(int argc, char * argv[]) {
                         GamePacket & packet = session->incomingPackets[i];
                         switch (packet.type) {
                         case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
-                            MapSpawnBullet(session->map, packet.shotFired.pos, packet.shotFired.dir);
+                            MapSpawnBullet(session->map, packet.shotFired.pos, packet.shotFired.dir, BULLET_TYPE_NORMAL);
 
                             GameSessionSendToPeer(session, &packet, 0, true);
                             GameSessionSendToPeer(session, &packet, 1, true);
@@ -235,7 +235,7 @@ int main(int argc, char * argv[]) {
                             if (enemy.fireCooldown <= 0.0f) {
                                 enemy.fireCooldown = 1.5f;
                                 v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
-                                MapSpawnBullet(session->map, enemy.pos, dir);
+                                MapSpawnBullet(session->map, enemy.pos, dir, BULLET_TYPE_NORMAL);
 
                                 GamePacket packet = {};
                                 packet.type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;

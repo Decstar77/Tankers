@@ -66,12 +66,13 @@ Player * MapSpawnPlayer(Map & map) {
     return nullptr;
 }
 
-Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir) {
+Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type) {
     for (i32 i = 0; i < MAX_BULLETS; i++) {
         Bullet & bullet = map.bullets[i];
         if (bullet.active == false) {
             ZeroStruct(bullet);
             bullet.active = true;
+            bullet.type = type;
             bullet.bounced = false;
             bullet.pos = pos;
             bullet.dir = dir;
@@ -110,18 +111,58 @@ MapTile * MapGetTileAtPos(Map & map, v2 pos) {
     return &map.tiles[flatIndex];
 }
 
+static f32 BulletSpeedFromType(BulletType type) {
+    switch (type) {
+        case BULLET_TYPE_NORMAL: return 10.0f;
+        case BULLET_TYPE_ROCKET: return 15.0f;
+        default: return 0.0f;
+    }
+
+    return 0.0f;
+}
+
+static f32 BulletSizeFromType(BulletType type) {
+    switch (type) {
+        case BULLET_TYPE_NORMAL: return 5.0f;
+        case BULLET_TYPE_ROCKET: return 10.0f;
+        default: return 0.0f;
+    }
+
+    return 0.0f;
+}
+
 void MapUpdate(Map & map, f32 dt) {
     // Update player fire cooldown
     map.localPlayer.fireCooldown -= dt;
     map.remotePlayer.fireCooldown -= dt;
 
-    for (i32 i = 0; i < MAX_BULLETS; i++) {
-        Bullet & bullet = map.bullets[i];
-        f32 bulletSpeed = 10;
+    for (i32 currentBulletIndex = 0; currentBulletIndex < MAX_BULLETS; currentBulletIndex++) {
+        Bullet & bullet = map.bullets[currentBulletIndex];
+        const f32 bulletSpeed = BulletSpeedFromType(bullet.type);
+        const f32 bulletSize = BulletSizeFromType(bullet.type);
         if (bullet.active) {
             v2 bv = bullet.dir * bulletSpeed;
+            Circle bulletCollider = { bullet.pos, bulletSize };
 
-            Circle bulletCollider = { bullet.pos, 5.0f };
+            bool hitBullet = false;
+            for (i32 otherBulletIndex = 0; otherBulletIndex < MAX_BULLETS; otherBulletIndex++) {
+                Bullet & otherBullet = map.bullets[otherBulletIndex];
+                if (otherBullet.active && otherBulletIndex != currentBulletIndex) {
+                    Circle otherBulletCollider = { otherBullet.pos, bulletSize };
+                    v2 obv = otherBullet.dir * bulletSpeed;
+                    SweepResult sweep = {};
+                    if (SweepCircleVsCircle(bulletCollider, bv, otherBulletCollider, obv, &sweep)) {
+                        bullet.active = false;
+                        otherBullet.active = false;
+                        hitBullet = true;
+                    }
+                }
+            }
+
+            if (hitBullet) {
+                continue;
+            }
+
             for (i32 tileIndex = 0; tileIndex < map.tileCount; tileIndex++) {
                 MapTile & tile = map.tiles[tileIndex];
                 SweepResult sweep;
@@ -153,29 +194,6 @@ void MapUpdate(Map & map, f32 dt) {
                     bullet.active = false;
                 }
             }
-
-            // CollisionManifold closestManifold = {};
-            // Circle bulletCollider = { bullet.pos, 5.0f };
-            // for (i32 tileIndex = 0; tileIndex < map.tileCount; tileIndex++) {
-            //     MapTile & tile = map.tiles[tileIndex];
-            //     CollisionManifold manifold = {};
-            //     if (CircleVsRect(bulletCollider, tile.rect, &manifold)) {
-            //         if (manifold.penetration > closestManifold.penetration) {
-            //             closestManifold = manifold;
-            //         }
-            //     }
-            // }
-
-            // if (closestManifold.penetration > 0) {
-            //     if (bullet.bounced == false) {
-            //         bullet.bounced = true;
-            //         bullet.dir = Reflect(bullet.dir, closestManifold.normal);
-            //         bullet.pos = bullet.pos + closestManifold.normal * closestManifold.penetration;
-            //     }
-            //     else {
-            //         bullet.active = false;
-            //     }
-            // }
 
             // for (i32 j = 0; j < MAX_ENEMIES; j++) {
             //     Enemy & enemy = map.enemies[j];
