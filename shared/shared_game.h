@@ -104,6 +104,9 @@ struct Map {
 
 Circle      PlayerGetCollider(Player * player);
 
+f32         BulletSpeedFromType(BulletType type);
+f32         BulletSizeFromType(BulletType type);
+
 void        MapStart(Map & map);
 
 Player *    MapSpawnPlayer(Map & map);

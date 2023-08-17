@@ -313,7 +313,12 @@ int main(int argc, char * argv[]) {
             for (i32 i = 0; i < MAX_BULLETS; i++) {
                 Bullet & bullet = map.bullets[i];
                 if (bullet.active) {
-                    DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, 5, ORANGE);
+                    switch (bullet.type) {
+                    case BULLET_TYPE_NORMAL: {
+                        f32 size = BulletSizeFromType(bullet.type);
+                        DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, size, ORANGE);
+                    } break;
+                    }
                 }
             }
         }

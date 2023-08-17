@@ -111,7 +111,7 @@ MapTile * MapGetTileAtPos(Map & map, v2 pos) {
     return &map.tiles[flatIndex];
 }
 
-static f32 BulletSpeedFromType(BulletType type) {
+f32 BulletSpeedFromType(BulletType type) {
     switch (type) {
         case BULLET_TYPE_NORMAL: return 10.0f;
         case BULLET_TYPE_ROCKET: return 15.0f;
@@ -121,9 +121,9 @@ static f32 BulletSpeedFromType(BulletType type) {
     return 0.0f;
 }
 
-static f32 BulletSizeFromType(BulletType type) {
+f32 BulletSizeFromType(BulletType type) {
     switch (type) {
-        case BULLET_TYPE_NORMAL: return 5.0f;
+        case BULLET_TYPE_NORMAL: return 7.0f;
         case BULLET_TYPE_ROCKET: return 10.0f;
         default: return 0.0f;
     }
