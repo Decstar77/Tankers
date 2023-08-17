@@ -77,13 +77,13 @@ struct Rect {
 };
 
 struct CollisionManifold {
-    bool collided;
     v2 normal;
     f32 penetration;
 };
 
 v2 ClosestPointOnCircle(v2 point, Circle circle);
 v2 ClosestPointOnRect(v2 point, Rect rect);
+bool CircleVsCircle(Circle c1, Circle c2, CollisionManifold * manifold = nullptr);
 bool CircleVsRect(Circle c, Rect r, CollisionManifold * manifold = nullptr);
 
 struct SweepResult {
@@ -91,5 +91,6 @@ struct SweepResult {
     v2 normal;
 };
 
+bool SweepCircleVsCircle(Circle c1, v2 c1_vel, Circle c2, v2 c2_vel, SweepResult* result);
 bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult* result);
 
