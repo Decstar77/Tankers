@@ -326,9 +326,9 @@ int main(int argc, char * argv[]) {
             if (peerData->gameSessionIndex != -1) {
                 if (gamePacket->type == GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA) {
                     GameSessionSendToPeersExpect(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, peerData->peerIndex, false);
-                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].pos = gamePacket->playerStreamData.pos;
-                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tankRot = gamePacket->playerStreamData.tankRot;
-                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].turretRot = gamePacket->playerStreamData.turretRot;
+                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.pos = gamePacket->playerStreamData.pos;
+                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.rot = gamePacket->playerStreamData.tankRot;
+                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.turretRot = gamePacket->playerStreamData.turretRot;
                 }
                 else {
                     sessions[peerData->gameSessionIndex].incomingPackets[sessions[peerData->gameSessionIndex].packetCount++] = *gamePacket;

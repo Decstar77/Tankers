@@ -4,8 +4,17 @@
 #include <math.h>
 #include <cstring> // For ubuntu
 
+Tank PlayerCreateTank(v2 pos) {
+    Tank tank = {};
+    tank.pos = pos;
+    tank.rot = 0.0f;
+    tank.turretRot = 0.0f;
+    tank.size = 25.0f;
+    return tank;
+}
+
 Circle PlayerGetCollider(Player * player) {
-    return { player->pos, player->size / 2.0f };
+    return { player->tank.pos, player->tank.size / 2.0f };
 }
 
 static void MapAddTile(Map & map, i32 x, i32 y) {
@@ -49,22 +58,16 @@ Player * MapSpawnPlayer(Map & map) {
     if (map.localPlayer.active == false) {
         map.localPlayer.active = true;
         map.localPlayer.playerNumber = 1;
-        map.localPlayer.pos = { 100.0f, 100.0f };
-        map.localPlayer.tankRot = 0.0f;
-        map.localPlayer.turretRot = 0.0f;
+        map.localPlayer.tank = PlayerCreateTank({ 100.0f, 100.0f });
         map.localPlayer.fireCooldown = 0.0f;
-        map.localPlayer.size = 25.0f;
         return &map.localPlayer;
     }
 
     if (map.remotePlayer.active == false) {
         map.remotePlayer.active = true;
         map.remotePlayer.playerNumber = 2;
-        map.remotePlayer.pos = { 200.0f, 200.0f };
-        map.remotePlayer.tankRot = 0.0f;
-        map.remotePlayer.turretRot = 0.0f;
+        map.remotePlayer.tank = PlayerCreateTank({ 200.0f, 100.0f });
         map.remotePlayer.fireCooldown = 0.0f;
-        map.remotePlayer.size = 25.0f;
         return &map.remotePlayer;
     }
 
@@ -193,7 +196,7 @@ void MapUpdate(Map & map, f32 dt) {
             if (enemy.active) {
                 enemy.fireCooldown -= GAME_TICK_TIME;
 
-                v2 toPlayer = map.localPlayer.pos - enemy.pos;
+                v2 toPlayer = map.localPlayer.tank.pos - enemy.pos;
                 enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
 
                 if (enemy.fireCooldown <= 0.0f) {

@@ -18,17 +18,21 @@ struct Bullet {
     v2 dir;
 };
 
+struct Tank {
+    v2 pos;
+    v2 remotePos;
+    f32 rot;
+    f32 remoteRot;
+    f32 turretRot;
+    f32 remoteTurretRot;
+    f32 size;
+};
+
 struct Player {
     bool active;
     i32 playerNumber;
-    v2 remotePos;
-    v2 pos;
-    f32 tankRot;
-    f32 remoteTankRot;
-    f32 turretRot;
-    f32 remoteTurretRot;
     f32 fireCooldown;
-    f32 size;
+    Tank tank;
 };
 
 /*
@@ -161,6 +165,7 @@ struct Map {
     };
 };
 
+Tank        PlayerCreateTank(v2 pos);
 Circle      PlayerGetCollider(Player * player);
 
 f32         BulletSpeedFromType(BulletType type);

@@ -67,7 +67,7 @@ static void DrawTank(v2 p, f32 size, f32 r, f32 tr, Color c) {
 
 static void DrawPlayer(Player * player) {
     Color color = player->playerNumber == 1 ? RED : BLUE;
-    DrawTank(player->pos, player->size, player->tankRot, player->turretRot, color);
+    DrawTank(player->tank.pos, player->tank.size, player->tank.rot, player->tank.turretRot, color);
 }
 
 static void DrawEnemy(Enemy * enemy) {
@@ -181,9 +181,9 @@ int main(int argc, char * argv[]) {
                     MapSpawnBullet(map, packet.shotFired.pos, packet.shotFired.dir, BULLET_TYPE_NORMAL);
                 } break;
                 case GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA: {
-                    map.remotePlayer.remotePos = packet.playerStreamData.pos;
-                    map.remotePlayer.remoteTankRot = packet.playerStreamData.tankRot;
-                    map.remotePlayer.remoteTurretRot = packet.playerStreamData.turretRot;
+                    map.remotePlayer.tank.remotePos = packet.playerStreamData.pos;
+                    map.remotePlayer.tank.remoteRot = packet.playerStreamData.tankRot;
+                    map.remotePlayer.tank.remoteTurretRot = packet.playerStreamData.turretRot;
                 } break;
                 case GAME_PACKET_TYPE_MAP_GAME_OVER: {
                     printf("Game over, reason: %s\n", MapGameOverReasonToString(packet.gameOver.reason));
@@ -257,9 +257,9 @@ int main(int argc, char * argv[]) {
                 }
             }
 
-            map.remotePlayer.pos = Lerp(map.remotePlayer.pos, map.remotePlayer.remotePos, 0.1f);
-            map.remotePlayer.tankRot = LerpAngle(map.remotePlayer.tankRot, map.remotePlayer.remoteTankRot, 0.1f);
-            map.remotePlayer.turretRot = LerpAngle(map.remotePlayer.turretRot, map.remotePlayer.remoteTurretRot, 0.1f);
+            map.remotePlayer.tank.pos = Lerp(map.remotePlayer.tank.pos, map.remotePlayer.tank.remotePos, 0.1f);
+            map.remotePlayer.tank.rot = LerpAngle(map.remotePlayer.tank.rot, map.remotePlayer.tank.remoteRot, 0.1f);
+            map.remotePlayer.tank.turretRot = LerpAngle(map.remotePlayer.tank.turretRot, map.remotePlayer.tank.remoteTurretRot, 0.1f);
 
             for (i32 i = 0; i < MAX_ENEMIES; i++) {
                 if (map.enemies[i].active == false) {

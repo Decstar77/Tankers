@@ -11,30 +11,30 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
     }
 
     dir = Normalize(dir);
-    v2 currentDir = { cosf(player->tankRot), sinf(player->tankRot) };
+    v2 currentDir = { cosf(player->tank.rot), sinf(player->tank.rot) };
     f32 angle = SignedAngle(currentDir, dir);
     if (fabsf(angle) > 0.1f) {
-        player->tankRot += angle * 0.1f;
+        player->tank.rot += angle * 0.1f;
     }
     else {
-        player->tankRot = atan2f(dir.y, dir.x);
+        player->tank.rot = atan2f(dir.y, dir.x);
     }
 
-    currentDir = { cosf(player->tankRot), sinf(player->tankRot) };
-    player->pos = player->pos + currentDir * speed;
+    currentDir = { cosf(player->tank.rot), sinf(player->tank.rot) };
+    player->tank.pos = player->tank.pos + currentDir * speed;
 
     // Wrap player movement
-    if (player->pos.x < player->size) {
-        player->pos.x = player->size;
+    if (player->tank.pos.x < player->tank.size) {
+        player->tank.pos.x = player->tank.size;
     }
-    else if (player->pos.x > map.width - player->size) {
-        player->pos.x = map.width - player->size;
+    else if (player->tank.pos.x > map.width - player->tank.size) {
+        player->tank.pos.x = map.width - player->tank.size;
     }
-    if (player->pos.y < player->size) {
-        player->pos.y = player->size;
+    if (player->tank.pos.y < player->tank.size) {
+        player->tank.pos.y = player->tank.size;
     }
-    else if (player->pos.y > map.height - player->size) {
-        player->pos.y = map.height - player->size;
+    else if (player->tank.pos.y > map.height - player->tank.size) {
+        player->tank.pos.y = map.height - player->tank.size;
     }
 
     Circle c = PlayerGetCollider(player);
@@ -42,14 +42,14 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
         MapTile & tile = map.tiles[i];
         CollisionManifold manifold = {};
         if (CircleVsRect(c, tile.rect, &manifold)) {
-            player->pos = player->pos + manifold.normal * manifold.penetration;
+            player->tank.pos = player->tank.pos + manifold.normal * manifold.penetration;
         }
     }
 }
 
 void LocalPlayerLook(Map & map, Player * player, v2 point) {
-    v2 dir = point - player->pos;
-    player->turretRot = atan2f(dir.y, dir.x);
+    v2 dir = point - player->tank.pos;
+    player->tank.turretRot = atan2f(dir.y, dir.x);
 }
 
 void LocalPlayerShoot(Map & map, Player * player) {
@@ -59,8 +59,8 @@ void LocalPlayerShoot(Map & map, Player * player) {
 
     player->fireCooldown = 0.2f;
 
-    v2 dir = { cosf(player->turretRot), sinf(player->turretRot) };
-    LocalMapSpawnBullet(map, player->pos, dir);
+    v2 dir = { cosf(player->tank.turretRot), sinf(player->tank.turretRot) };
+    LocalMapSpawnBullet(map, player->tank.pos, dir);
 }
 
 void LocalMapSpawnBullet(Map & map, v2 pos, v2 dir) {
@@ -74,8 +74,8 @@ void LocalMapSpawnBullet(Map & map, v2 pos, v2 dir) {
 void LocalSendStreamData(Map & map) {
     GamePacket packet = {};
     packet.type = GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA;
-    packet.playerStreamData.pos = map.localPlayer.pos;
-    packet.playerStreamData.tankRot = map.localPlayer.tankRot;
-    packet.playerStreamData.turretRot = map.localPlayer.turretRot;
+    packet.playerStreamData.pos = map.localPlayer.tank.pos;
+    packet.playerStreamData.tankRot = map.localPlayer.tank.rot;
+    packet.playerStreamData.turretRot = map.localPlayer.tank.turretRot;
     NetworkSendPacket(packet, false);
 }
