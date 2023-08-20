@@ -117,6 +117,7 @@ int main(int argc, char * argv[]) {
     printf("using server: %s\n", gameSettings.serverIp);
 
     Map map = {};
+    map.isAuthoritative = false;
     map.width = gameSettings.width;
     map.height = gameSettings.height;
 
@@ -126,7 +127,6 @@ int main(int argc, char * argv[]) {
 
     bool isMainMenu = true;
     bool isGameOver = false;
-    bool isSinglePlayer = false;
 
     bool debugPauseSim = false;
 
@@ -148,14 +148,10 @@ int main(int argc, char * argv[]) {
                     }
                 }
                 if (DrawButton(gameSettings.width / 2, gameSettings.height / 2 - 100, "Single Pringle")) {
-                    ZeroStruct(map);
-                    map.width = gameSettings.width;
-                    map.height = gameSettings.height;
+                    MapStart(map, gameSettings.width, gameSettings.height, true);
                     MapSpawnPlayer(map);
                     MapSpawnPlayer(map);
-                    MapStart(map);
                     isMainMenu = false;
-                    isSinglePlayer = true;
                 }
             }
             else {
@@ -174,13 +170,9 @@ int main(int argc, char * argv[]) {
             while (NetworkPoll(packet)) {
                 switch (packet.type) {
                 case GAME_PACKET_TYPE_MAP_START: {
-                    ZeroStruct(map);
-                    map.width = gameSettings.width;
-                    map.height = gameSettings.height;
+                    MapStart(map, gameSettings.width, gameSettings.height, false);
                     map.localPlayer = packet.mapStart.localPlayer;
                     map.remotePlayer = packet.mapStart.remotePlayer;
-
-                    MapStart(map);
 
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
                     isMainMenu = false;
@@ -261,24 +253,6 @@ int main(int argc, char * argv[]) {
                     }
 
                     LocalSendStreamData(map);
-                    if (isSinglePlayer) {
-                        for (int i = 0; i < map.enemyCount; i++) {
-                            Enemy & enemy = map.enemies[i];
-                            if (enemy.active) {
-                                enemy.fireCooldown -= GAME_TICK_TIME;
-
-                                v2 toPlayer = map.localPlayer.pos - enemy.pos;
-                                enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
-
-                                if (enemy.fireCooldown <= 0.0f) {
-                                    enemy.fireCooldown = 1.5f;
-                                    v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
-                                    MapSpawnBullet(map, enemy.pos, dir, BULLET_TYPE_NORMAL);
-                                }
-                            }
-                        }
-                    }
-
                     MapUpdate(map, GAME_TICK_TIME);
                 }
             }

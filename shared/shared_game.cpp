@@ -25,7 +25,12 @@ static void MapAddTile(Map & map, i32 x, i32 y) {
     tile.rect = { tile.pos, tile.pos + v2{ tile.size, tile.size } };
 }
 
-void MapStart(Map & map) {
+void MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative) {
+    ZeroStruct(map);
+    map.width = mapWidth;
+    map.height = mapHeight;
+    map.isAuthoritative = isAuthoritative;
+
     MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
     //MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
@@ -111,11 +116,26 @@ MapTile * MapGetTileAtPos(Map & map, v2 pos) {
     return &map.tiles[flatIndex];
 }
 
+void MapClearPackets(Map & map) {
+    map.packetCount = 0;
+}
+
+GamePacket * MapAddGamePacket(Map & map) {
+    if (map.packetCount >= MAX_MAP_PACKETS) {
+        return nullptr;
+    }
+
+    GamePacket & packet = map.mpPackets[map.packetCount];
+    map.packetCount++;
+    ZeroStruct(packet);
+    return &packet;
+}
+
 f32 BulletSpeedFromType(BulletType type) {
     switch (type) {
-        case BULLET_TYPE_NORMAL: return 10.0f;
-        case BULLET_TYPE_ROCKET: return 15.0f;
-        default: return 0.0f;
+    case BULLET_TYPE_NORMAL: return 10.0f;
+    case BULLET_TYPE_ROCKET: return 15.0f;
+    default: return 0.0f;
     }
 
     return 0.0f;
@@ -123,18 +143,43 @@ f32 BulletSpeedFromType(BulletType type) {
 
 f32 BulletSizeFromType(BulletType type) {
     switch (type) {
-        case BULLET_TYPE_NORMAL: return 7.0f;
-        case BULLET_TYPE_ROCKET: return 10.0f;
-        default: return 0.0f;
+    case BULLET_TYPE_NORMAL: return 7.0f;
+    case BULLET_TYPE_ROCKET: return 10.0f;
+    default: return 0.0f;
     }
 
     return 0.0f;
 }
 
 void MapUpdate(Map & map, f32 dt) {
+    MapClearPackets(map);
+
     // Update player fire cooldown
     map.localPlayer.fireCooldown -= dt;
     map.remotePlayer.fireCooldown -= dt;
+
+    if (map.isAuthoritative) {
+        for (int i = 0; i < map.enemyCount; i++) {
+            Enemy & enemy = map.enemies[i];
+            if (enemy.active) {
+                enemy.fireCooldown -= GAME_TICK_TIME;
+
+                v2 toPlayer = map.localPlayer.pos - enemy.pos;
+                enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
+
+                if (enemy.fireCooldown <= 0.0f) {
+                    enemy.fireCooldown = 1.5f;
+                    v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
+                    MapSpawnBullet(map, enemy.pos, dir, BULLET_TYPE_NORMAL);
+
+                    GamePacket * packet = MapAddGamePacket(map);
+                    packet->type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;
+                    packet->shotFired.pos = enemy.pos;
+                    packet->shotFired.dir = dir;
+                }
+            }
+        }
+    }
 
     for (i32 currentBulletIndex = 0; currentBulletIndex < MAX_BULLETS; currentBulletIndex++) {
         Bullet & bullet = map.bullets[currentBulletIndex];

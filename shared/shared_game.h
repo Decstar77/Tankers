@@ -74,47 +74,6 @@ struct MapTile {
     Rect rect;
 };
 
-#define MAX_BULLETS 256
-#define MAX_ENEMIES 256
-#define MAX_MAP_TILES 256
-
-struct Map {
-    i32 width;
-    i32 height;
-
-    Bullet bullets[MAX_BULLETS];
-
-    i32 enemyCount;
-    Enemy enemies[MAX_ENEMIES];
-
-    i32 tileSize;
-    i32 tileCount;
-    i32 tilesHCount;
-    i32 tilesVCount;
-    MapTile tiles[MAX_MAP_TILES];
-
-    union {
-        Player players[2];
-        struct {
-            Player localPlayer;
-            Player remotePlayer;
-        };
-    };
-};
-
-Circle      PlayerGetCollider(Player * player);
-
-f32         BulletSpeedFromType(BulletType type);
-f32         BulletSizeFromType(BulletType type);
-
-void        MapStart(Map & map);
-
-Player *    MapSpawnPlayer(Map & map);
-Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type);
-Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
-MapTile *   MapGetTileAtPos(Map & map, v2 pos);
-
-void        MapUpdate(Map & map, f32 dt);
 
 enum MapGameOverReason {
     MAP_GAME_OVER_REASON_INVALID = 0,
@@ -169,6 +128,57 @@ struct GamePacket {
         } entityStreamData;
     };
 };
+
+#define MAX_BULLETS 256
+#define MAX_ENEMIES 256
+#define MAX_MAP_TILES 256
+#define MAX_MAP_PACKETS 256
+
+struct Map {
+    bool isAuthoritative;
+    i32 width;
+    i32 height;
+
+    Bullet bullets[MAX_BULLETS];
+
+    i32 enemyCount;
+    Enemy enemies[MAX_ENEMIES];
+
+    i32 tileSize;
+    i32 tileCount;
+    i32 tilesHCount;
+    i32 tilesVCount;
+    MapTile tiles[MAX_MAP_TILES];
+
+    bool isMultiplayer;
+    i32 packetCount;
+    GamePacket mpPackets[MAX_MAP_PACKETS];
+
+    union {
+        Player players[2];
+        struct {
+            Player localPlayer;
+            Player remotePlayer;
+        };
+    };
+};
+
+Circle      PlayerGetCollider(Player * player);
+
+f32         BulletSpeedFromType(BulletType type);
+f32         BulletSizeFromType(BulletType type);
+
+void        MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative);
+
+Player *    MapSpawnPlayer(Map & map);
+Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type);
+Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
+MapTile *   MapGetTileAtPos(Map & map, v2 pos);
+
+void            MapClearPackets(Map & map);
+GamePacket *    MapAddGamePacket(Map & map);
+
+void        MapUpdate(Map & map, f32 dt);
 
 // Setting values
 constexpr i32 GAME_TICKS_PER_SECOND = 30;

@@ -222,32 +222,19 @@ int main(int argc, char * argv[]) {
                     }
 
                     session->packetCount = 0;
-
                     Map & map = session->map;
-                    for (int i = 0; i < map.enemyCount; i++) {
-                        Enemy & enemy = map.enemies[i];
-                        if (enemy.active) {
-                            enemy.fireCooldown -= GAME_TICK_TIME;
+                    MapUpdate(map, GAME_TICK_TIME);
 
-                            v2 toPlayer = map.localPlayer.pos - enemy.pos;
-                            enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
-
-                            if (enemy.fireCooldown <= 0.0f) {
-                                enemy.fireCooldown = 1.5f;
-                                v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
-                                MapSpawnBullet(session->map, enemy.pos, dir, BULLET_TYPE_NORMAL);
-
-                                GamePacket packet = {};
-                                packet.type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;
-                                packet.shotFired.pos = enemy.pos;
-                                packet.shotFired.dir = dir;
-                                GameSessionSendToPeersExpect(session, &packet, peerData1->peerIndex, true);
-                                GameSessionSendToPeersExpect(session, &packet, peerData2->peerIndex, true);
-                            }
+                    for (int i = 0; i < map.packetCount; i++) {
+                        GamePacket & packet = map.mpPackets[i];
+                        switch (packet.type) {
+                        case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
+                            GameSessionSendToPeer(session, &packet, peerData1->peerIndex, true);
+                            GameSessionSendToPeer(session, &packet, peerData2->peerIndex, true);
+                        } break;
                         }
                     }
 
-                    MapUpdate(session->map, GAME_TICK_TIME);
 
                     GamePacket packet = {};
                     packet.type = GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA;
@@ -296,6 +283,8 @@ int main(int argc, char * argv[]) {
                         peerData2->gameSessionIndex = i;
                         peerData2->peerIndex = 1;
 
+                        MapStart(sessions[i].map, 800, 600, true);
+
                         Player * player1 = MapSpawnPlayer(sessions[i].map);
                         Player * player2 = MapSpawnPlayer(sessions[i].map);
 
@@ -312,8 +301,6 @@ int main(int argc, char * argv[]) {
                         packet.mapStart.localPlayer = *player2;
                         packet.mapStart.remotePlayer = *player1;
                         GameSessionSendToPeer(&sessions[i], &packet, 1, true);
-
-                        MapStart(sessions[i].map);
 
                         printf("Starting game session %d\n", i);
 
