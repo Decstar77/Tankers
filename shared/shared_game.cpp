@@ -32,7 +32,7 @@ void MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative) {
     map.isAuthoritative = isAuthoritative;
 
     MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
-    //MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
+    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
     map.tileSize = 50;
     map.tilesHCount = map.width / map.tileSize;
@@ -89,21 +89,23 @@ Bullet * MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type) {
 }
 
 Enemy * MapSpawnEnemy(Map & map, EnemyType type, v2 pos) {
-    if (map.enemyCount >= MAX_ENEMIES) {
-        return nullptr;
+    for (i32 i = 0; i < MAX_ENEMIES; i++) {
+        Enemy & enemy = map.enemies[i];
+        if (enemy.active == false) {
+            ZeroStruct(enemy);
+            enemy.active = true;
+            enemy.type = type;
+            enemy.pos = pos;
+            enemy.tankRot = 0.0f;
+            enemy.fireCooldown = 0.0f;
+            enemy.size = 25.0f;
+            enemy.remotePos = pos;
+            enemy.remoteTankRot = 0.0f;
+            enemy.remoteTurretRot = 0.0f;
+            return &enemy;
+        }
     }
-
-    Enemy & enemy = map.enemies[map.enemyCount++];
-    enemy.active = true;
-    enemy.type = type;
-    enemy.pos = pos;
-    enemy.tankRot = 0.0f;
-    enemy.fireCooldown = 0.0f;
-    enemy.size = 25.0f;
-    enemy.remotePos = pos;
-    enemy.remoteTankRot = 0.0f;
-    enemy.remoteTurretRot = 0.0f;
-    return &enemy;
+    return nullptr;
 }
 
 MapTile * MapGetTileAtPos(Map & map, v2 pos) {
@@ -114,6 +116,14 @@ MapTile * MapGetTileAtPos(Map & map, v2 pos) {
         return nullptr;
     }
     return &map.tiles[flatIndex];
+}
+
+void MapDestroyEnemy(Map & map, i32 index) {
+    if (index < 0 || index >= MAX_ENEMIES) {
+        return;
+    }
+
+    map.enemies[index].active = false;
 }
 
 void MapClearPackets(Map & map) {
@@ -151,6 +161,25 @@ f32 BulletSizeFromType(BulletType type) {
     return 0.0f;
 }
 
+i32 MapGetEnemyCount(Map & map) {
+    i32 count = 0;
+    for (i32 i = 0; i < MAX_ENEMIES; i++) {
+        if (map.enemies[i].active) {
+            count++;
+        }
+    }
+    return count;
+}
+
+Circle BulletSizeColliderFromType(v2 p, BulletType type) {
+    switch (type) {
+    case BULLET_TYPE_NORMAL: return { p, BulletSizeFromType(type) / 2.0f }; // TODO: This is a hack
+    case BULLET_TYPE_ROCKET: return { p, BulletSizeFromType(type) };
+    default: return {};
+    }
+    return {};
+}
+
 void MapUpdate(Map & map, f32 dt) {
     MapClearPackets(map);
 
@@ -159,7 +188,7 @@ void MapUpdate(Map & map, f32 dt) {
     map.remotePlayer.fireCooldown -= dt;
 
     if (map.isAuthoritative) {
-        for (int i = 0; i < map.enemyCount; i++) {
+        for (int i = 0; i < MAX_ENEMIES; i++) {
             Enemy & enemy = map.enemies[i];
             if (enemy.active) {
                 enemy.fireCooldown -= GAME_TICK_TIME;
@@ -170,11 +199,12 @@ void MapUpdate(Map & map, f32 dt) {
                 if (enemy.fireCooldown <= 0.0f) {
                     enemy.fireCooldown = 1.5f;
                     v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
-                    MapSpawnBullet(map, enemy.pos, dir, BULLET_TYPE_NORMAL);
+                    v2 spawnPos = enemy.pos + dir * 21.0f;
+                    MapSpawnBullet(map, spawnPos, dir, BULLET_TYPE_NORMAL);
 
                     GamePacket * packet = MapAddGamePacket(map);
                     packet->type = GAME_PACKET_TYPE_MAP_SHOT_FIRED;
-                    packet->shotFired.pos = enemy.pos;
+                    packet->shotFired.pos = spawnPos;
                     packet->shotFired.dir = dir;
                 }
             }
@@ -187,13 +217,13 @@ void MapUpdate(Map & map, f32 dt) {
         const f32 bulletSize = BulletSizeFromType(bullet.type);
         if (bullet.active) {
             v2 bv = bullet.dir * bulletSpeed;
-            Circle bulletCollider = { bullet.pos, bulletSize };
+            Circle bulletCollider = BulletSizeColliderFromType(bullet.pos, bullet.type);
 
             bool hitBullet = false;
             for (i32 otherBulletIndex = 0; otherBulletIndex < MAX_BULLETS; otherBulletIndex++) {
                 Bullet & otherBullet = map.bullets[otherBulletIndex];
                 if (otherBullet.active && otherBulletIndex != currentBulletIndex) {
-                    Circle otherBulletCollider = { otherBullet.pos, bulletSize };
+                    Circle otherBulletCollider = BulletSizeColliderFromType(otherBullet.pos, otherBullet.type);
                     v2 obv = otherBullet.dir * bulletSpeed;
                     SweepResult sweep = {};
                     if (SweepCircleVsCircle(bulletCollider, bv, otherBulletCollider, obv, &sweep)) {
@@ -240,16 +270,16 @@ void MapUpdate(Map & map, f32 dt) {
                 }
             }
 
-            // for (i32 j = 0; j < MAX_ENEMIES; j++) {
-            //     Enemy & enemy = map.enemies[j];
-            //     if (enemy.active) {
-            //         Circle enemyCollider = { enemy.pos, enemy.size / 2.0f };
-            //         if (CircleVsCircle(bulletCollider, enemyCollider)) {
-            //             bullet.active = false;
-            //             enemy.active = false;
-            //         }
-            //     }
-            // }
+            for (i32 enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
+                Enemy & enemy = map.enemies[enemyIndex];
+                if (enemy.active) {
+                    Circle enemyCollider = { enemy.pos, enemy.size / 2.0f };
+                    if (CircleVsCircle(bulletCollider, enemyCollider)) {
+                        bullet.active = false;
+                        enemy.active = false;
+                    }
+                }
+            }
         }
     }
 }

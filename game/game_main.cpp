@@ -261,7 +261,11 @@ int main(int argc, char * argv[]) {
             map.remotePlayer.tankRot = LerpAngle(map.remotePlayer.tankRot, map.remotePlayer.remoteTankRot, 0.1f);
             map.remotePlayer.turretRot = LerpAngle(map.remotePlayer.turretRot, map.remotePlayer.remoteTurretRot, 0.1f);
 
-            for (i32 i = 0; i < map.enemyCount; i++) {
+            for (i32 i = 0; i < MAX_ENEMIES; i++) {
+                if (map.enemies[i].active == false) {
+                    continue;
+                }
+
                 Enemy & enemy = map.enemies[i];
                 enemy.pos = Lerp(enemy.pos, enemy.remotePos, 0.1f);
                 enemy.tankRot = LerpAngle(enemy.tankRot, enemy.remoteTankRot, 0.1f);
@@ -272,7 +276,11 @@ int main(int argc, char * argv[]) {
             DrawPlayer(&map.remotePlayer);
 
             // DrawEnemies
-            for (i32 i = 0; i < map.enemyCount; i++) {
+            for (i32 i = 0; i < MAX_ENEMIES; i++) {
+                if (map.enemies[i].active == false) {
+                    continue;
+                }
+
                 DrawEnemy(&map.enemies[i]);
             }
 

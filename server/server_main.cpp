@@ -238,14 +238,19 @@ int main(int argc, char * argv[]) {
 
                     GamePacket packet = {};
                     packet.type = GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA;
-                    packet.entityStreamData.entityCount = map.enemyCount;
-                    for (int i = 0; i < map.enemyCount; i++) {
+                    i32 enemyCount = 0;
+                    for (int i = 0; i < MAX_ENEMIES; i++) {
                         Enemy & enemy = map.enemies[i];
-                        packet.entityStreamData.indices[i] = i;
-                        packet.entityStreamData.pos[i] = enemy.pos;
-                        packet.entityStreamData.tankRot[i] = enemy.tankRot;
-                        packet.entityStreamData.turretRot[i] = enemy.turretRot;
+                        if (enemy.active) {
+                            packet.entityStreamData.indices[enemyCount] = i;
+                            packet.entityStreamData.pos[enemyCount] = enemy.pos;
+                            packet.entityStreamData.tankRot[enemyCount] = enemy.tankRot;
+                            packet.entityStreamData.turretRot[enemyCount] = enemy.turretRot;
+                            enemyCount++;
+                        }
+
                     }
+                    packet.entityStreamData.entityCount = enemyCount;
 
                     GameSessionSendToAllPeers(session, &packet, false);
 

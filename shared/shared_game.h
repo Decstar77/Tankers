@@ -140,8 +140,6 @@ struct Map {
     i32 height;
 
     Bullet bullets[MAX_BULLETS];
-
-    i32 enemyCount;
     Enemy enemies[MAX_ENEMIES];
 
     i32 tileSize;
@@ -167,16 +165,20 @@ Circle      PlayerGetCollider(Player * player);
 
 f32         BulletSpeedFromType(BulletType type);
 f32         BulletSizeFromType(BulletType type);
+Circle      BulletSizeColliderFromType(v2 p, BulletType type);
+
+i32         MapGetEnemyCount(Map & map);
 
 void        MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative);
 
 Player *    MapSpawnPlayer(Map & map);
 Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type);
 Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
+void        MapDestroyEnemy(Map & map, i32 index);
 MapTile *   MapGetTileAtPos(Map & map, v2 pos);
 
 void            MapClearPackets(Map & map);
-GamePacket *    MapAddGamePacket(Map & map);
+GamePacket * MapAddGamePacket(Map & map);
 
 void        MapUpdate(Map & map, f32 dt);
 
