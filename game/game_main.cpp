@@ -77,7 +77,7 @@ static void DrawEnemy(Enemy * enemy) {
     case ENEMY_TYPE_DARK_BROWN: color = { 128, 64, 0, 255 }; break;
     }
 
-    DrawTank(enemy->pos, enemy->size, enemy->tankRot, enemy->turretRot, color);
+    DrawTank(enemy->tank.pos, enemy->tank.size, enemy->tank.rot, enemy->tank.turretRot, color);
 }
 
 static bool DrawButton(i32 centerX, i32 centerY, const char * text) {
@@ -191,9 +191,10 @@ int main(int argc, char * argv[]) {
                 } break;
                 case GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA: {
                     for (i32 i = 0; i < packet.entityStreamData.entityCount; i++) {
-                        map.enemies[i].remotePos = packet.entityStreamData.pos[i];
-                        map.enemies[i].remoteTankRot = packet.entityStreamData.tankRot[i];
-                        map.enemies[i].remoteTurretRot = packet.entityStreamData.turretRot[i];
+                        i32 index = packet.entityStreamData.indices[i];
+                        map.enemies[index].tank.remotePos = packet.entityStreamData.pos[i];
+                        map.enemies[index].tank.remoteRot = packet.entityStreamData.tankRot[i];
+                        map.enemies[index].tank.remoteTurretRot = packet.entityStreamData.turretRot[i];
                     }
                 } break;
                 }
@@ -267,9 +268,9 @@ int main(int argc, char * argv[]) {
                 }
 
                 Enemy & enemy = map.enemies[i];
-                enemy.pos = Lerp(enemy.pos, enemy.remotePos, 0.1f);
-                enemy.tankRot = LerpAngle(enemy.tankRot, enemy.remoteTankRot, 0.1f);
-                enemy.turretRot = LerpAngle(enemy.turretRot, enemy.remoteTurretRot, 0.1f);
+                enemy.tank.pos = Lerp(enemy.tank.pos, enemy.tank.remotePos, 0.1f);
+                enemy.tank.rot = LerpAngle(enemy.tank.rot, enemy.tank.remoteRot, 0.1f);
+                enemy.tank.turretRot = LerpAngle(enemy.tank.turretRot, enemy.tank.remoteTurretRot, 0.1f);
             }
 
             DrawPlayer(&map.localPlayer);

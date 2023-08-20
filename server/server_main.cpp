@@ -243,10 +243,13 @@ int main(int argc, char * argv[]) {
                         Enemy & enemy = map.enemies[i];
                         if (enemy.active) {
                             packet.entityStreamData.indices[enemyCount] = i;
-                            packet.entityStreamData.pos[enemyCount] = enemy.pos;
-                            packet.entityStreamData.tankRot[enemyCount] = enemy.tankRot;
-                            packet.entityStreamData.turretRot[enemyCount] = enemy.turretRot;
+                            packet.entityStreamData.pos[enemyCount] = enemy.tank.pos;
+                            packet.entityStreamData.tankRot[enemyCount] = enemy.tank.rot;
+                            packet.entityStreamData.turretRot[enemyCount] = enemy.tank.turretRot;
                             enemyCount++;
+                            if (enemyCount == 20) {
+                                break;
+                            }
                         }
 
                     }

@@ -98,13 +98,8 @@ Enemy * MapSpawnEnemy(Map & map, EnemyType type, v2 pos) {
             ZeroStruct(enemy);
             enemy.active = true;
             enemy.type = type;
-            enemy.pos = pos;
-            enemy.tankRot = 0.0f;
             enemy.fireCooldown = 0.0f;
-            enemy.size = 25.0f;
-            enemy.remotePos = pos;
-            enemy.remoteTankRot = 0.0f;
-            enemy.remoteTurretRot = 0.0f;
+            enemy.tank = EnemyCreateTank(pos, type);
             return &enemy;
         }
     }
@@ -183,6 +178,18 @@ Circle BulletSizeColliderFromType(v2 p, BulletType type) {
     return {};
 }
 
+Tank EnemyCreateTank(v2 pos, EnemyType type) {
+    Tank tank = {};
+    tank.pos = pos;
+    tank.rot = 0.0f;
+    tank.turretRot = 0.0f;
+    tank.size = 25.0f;
+    tank.remotePos = pos;
+    tank.remoteRot = 0.0f;
+    tank.remoteTurretRot = 0.0f;
+    return tank;
+}
+
 void MapUpdate(Map & map, f32 dt) {
     MapClearPackets(map);
 
@@ -196,13 +203,13 @@ void MapUpdate(Map & map, f32 dt) {
             if (enemy.active) {
                 enemy.fireCooldown -= GAME_TICK_TIME;
 
-                v2 toPlayer = map.localPlayer.tank.pos - enemy.pos;
-                enemy.tankRot = atan2f(toPlayer.y, toPlayer.x);
+                v2 toPlayer = map.localPlayer.tank.pos - enemy.tank.pos;
+                enemy.tank.rot = atan2f(toPlayer.y, toPlayer.x);
 
                 if (enemy.fireCooldown <= 0.0f) {
                     enemy.fireCooldown = 1.5f;
-                    v2 dir = { cosf(enemy.tankRot), sinf(enemy.tankRot) };
-                    v2 spawnPos = enemy.pos + dir * 21.0f;
+                    v2 dir = { cosf(enemy.tank.rot), sinf(enemy.tank.rot) };
+                    v2 spawnPos = enemy.tank.pos + dir * 21.0f;
                     MapSpawnBullet(map, spawnPos, dir, BULLET_TYPE_NORMAL);
 
                     GamePacket * packet = MapAddGamePacket(map);
@@ -276,7 +283,7 @@ void MapUpdate(Map & map, f32 dt) {
             for (i32 enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
                 Enemy & enemy = map.enemies[enemyIndex];
                 if (enemy.active) {
-                    Circle enemyCollider = { enemy.pos, enemy.size / 2.0f };
+                    Circle enemyCollider = { enemy.tank.pos, enemy.tank.size / 2.0f };
                     if (CircleVsCircle(bulletCollider, enemyCollider)) {
                         bullet.active = false;
                         enemy.active = false;

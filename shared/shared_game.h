@@ -57,16 +57,9 @@ enum EnemyType {
 struct Enemy {
     bool active;
     EnemyType type;
-    v2 pos;
-    f32 tankRot;
-    f32 turretRot;
     f32 fireCooldown;
-    f32 size;
-
     i32 lastSend;
-    v2 remotePos;
-    f32 remoteTankRot;
-    f32 remoteTurretRot;
+    Tank tank;
 };
 
 struct MapTile {
@@ -172,6 +165,8 @@ f32         BulletSpeedFromType(BulletType type);
 f32         BulletSizeFromType(BulletType type);
 Circle      BulletSizeColliderFromType(v2 p, BulletType type);
 
+Tank        EnemyCreateTank(v2 pos, EnemyType type);
+
 i32         MapGetEnemyCount(Map & map);
 
 void        MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative);
@@ -183,7 +178,7 @@ void        MapDestroyEnemy(Map & map, i32 index);
 MapTile *   MapGetTileAtPos(Map & map, v2 pos);
 
 void            MapClearPackets(Map & map);
-GamePacket * MapAddGamePacket(Map & map);
+GamePacket *    MapAddGamePacket(Map & map);
 
 void        MapUpdate(Map & map, f32 dt);
 
