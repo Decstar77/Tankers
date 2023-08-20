@@ -204,11 +204,11 @@ void MapUpdate(Map & map, f32 dt) {
                 enemy.fireCooldown -= GAME_TICK_TIME;
 
                 v2 toPlayer = map.localPlayer.tank.pos - enemy.tank.pos;
-                enemy.tank.rot = atan2f(toPlayer.y, toPlayer.x);
+                enemy.tank.turretRot = atan2f(toPlayer.y, toPlayer.x);
 
                 if (enemy.fireCooldown <= 0.0f) {
                     enemy.fireCooldown = 1.5f;
-                    v2 dir = { cosf(enemy.tank.rot), sinf(enemy.tank.rot) };
+                    v2 dir = { cosf(enemy.tank.turretRot), sinf(enemy.tank.turretRot) };
                     v2 spawnPos = enemy.tank.pos + dir * 21.0f;
                     MapSpawnBullet(map, spawnPos, dir, BULLET_TYPE_NORMAL);
 

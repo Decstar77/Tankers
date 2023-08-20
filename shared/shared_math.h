@@ -16,12 +16,16 @@ inline f32 Lerp(f32 a, f32 b, f32 t) {
     return a + (b - a) * t;
 }
 
-inline f32 Min(f32 a, f32 b){
+inline f32 Min(f32 a, f32 b) {
     return a < b ? a : b;
 }
 
-inline f32 Max(f32 a, f32 b){
+inline f32 Max(f32 a, f32 b) {
     return a > b ? a : b;
+}
+
+inline f32 Clamp(f32 a, f32 min, f32 max) {
+    return a < min ? min : (a > max ? max : a);
 }
 
 inline void Swap(f32 * a, f32 * b) {
@@ -58,13 +62,14 @@ v2 operator/(v2 a, f32 b);
 v2 operator*(f32 a, v2 b);
 v2 operator/(f32 a, v2 b);
 
-f32 Dot(v2 a, v2 b);
-v2  Normalize(v2 v);
-v2  Lerp(v2 a, v2 b, f32 t);
-v2  Reflect(v2 v, v2 n);
-f32 SignedAngle(v2 a, v2 b);
-bool RoughlyEqual(v2 a, v2 b, f32 epsilon = 0.0001f);
-bool RoughlyZero(v2 a, f32 epsilon = 0.0001f);
+f32     Dot(v2 a, v2 b);
+v2      Normalize(v2 v);
+v2      Lerp(v2 a, v2 b, f32 t);
+v2      Reflect(v2 v, v2 n);
+v2      Clamp(v2 v, v2 min, v2 max);
+f32     SignedAngle(v2 a, v2 b);
+bool    RoughlyEqual(v2 a, v2 b, f32 epsilon = 0.0001f);
+bool    RoughlyZero(v2 a, f32 epsilon = 0.0001f);
 
 struct Circle {
     v2 pos;
@@ -91,6 +96,6 @@ struct SweepResult {
     v2 normal;
 };
 
-bool SweepCircleVsCircle(Circle c1, v2 c1_vel, Circle c2, v2 c2_vel, SweepResult* result);
-bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult* result);
+bool SweepCircleVsCircle(Circle c1, v2 c1_vel, Circle c2, v2 c2_vel, SweepResult * result);
+bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult * result);
 

@@ -43,6 +43,10 @@ v2 Reflect(v2 v, v2 n) {
     return v - 2.0f * Dot(v, n) * n;
 }
 
+v2 Clamp(v2 v, v2 min, v2 max) {
+    return { Clamp(v.x, min.x, max.x), Clamp(v.y, min.y, max.y) };
+}
+
 f32 SignedAngle(v2 a, v2 b) {
     f32 angle = atan2f(b.y, b.x) - atan2f(a.y, a.x);
     if (angle < -PI) {
