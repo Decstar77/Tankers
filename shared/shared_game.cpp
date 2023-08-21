@@ -6,6 +6,7 @@
 
 Tank PlayerCreateTank(v2 pos) {
     Tank tank = {};
+    tank.startingPos = pos;
     tank.pos = pos;
     tank.rot = 0.0f;
     tank.turretRot = 0.0f;
@@ -34,24 +35,82 @@ static void MapAddTile(Map & map, i32 x, i32 y) {
     tile.rect = { tile.pos, tile.pos + v2{ tile.size, tile.size } };
 }
 
-void MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative) {
-    ZeroStruct(map);
-    map.width = mapWidth;
-    map.height = mapHeight;
+void MapSizeGetDimensions(MapSize size, i32 * width, i32 * height) {
+    // @TODO: Try some of these sizes
+    /* List of 16:9 resolutions/sizes
+        640x360
+        1024x576
+        1152x648
+        1280x720
+        1366x768
+        1600x900
+        1920x1080
+        2560x1440
+        3840x2160
+    */
+    switch (size) {
+    case MAP_SIZE_SMALL: {
+        *width = 640;
+        *height = 360;
+    } break;
+    case MAP_SIZE_MEDIUM: {
+        *width = 1200;
+        *height = 800;
+    } break;
+    case MAP_SIZE_LARGE: {
+        *width = 1600;
+        *height = 1200;
+    } break;
+    default: {
+        *width = 0;
+        *height = 0;
+        Assert(false);
+    } break;
+    }
+}
+
+const char * MapSizeToString(MapSize size) {
+    switch (size) {
+    case MAP_SIZE_SMALL:    return Stringify(MAP_SIZE_SMALL);
+    case MAP_SIZE_MEDIUM:   return Stringify(MAP_SIZE_MEDIUM);
+    case MAP_SIZE_LARGE:    return Stringify(MAP_SIZE_LARGE);
+    default: {
+        return nullptr;
+        Assert(false);
+    } break;
+    }
+    return nullptr;
+}
+
+MapSize MapSizeFromString(const char * str) {
+    if (strcmp(str, Stringify(MAP_SIZE_SMALL)) == 0) {
+        return MAP_SIZE_SMALL;
+    }
+    else if (strcmp(str, Stringify(MAP_SIZE_MEDIUM)) == 0) {
+        return MAP_SIZE_MEDIUM;
+    }
+    else if (strcmp(str, Stringify(MAP_SIZE_LARGE)) == 0) {
+        return MAP_SIZE_LARGE;
+    }
+    else {
+        Assert(false);
+        return MAP_SIZE_SMALL;
+    }
+}
+
+void MapStart(Map & map, bool isAuthoritative) {
+    Assert(map.version != MAP_VERSION_INVALID);
+    Assert(map.size != MAP_SIZE_INVALID);
     map.isAuthoritative = isAuthoritative;
 
-    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
-    MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
-    map.tileSize = 50;
-    map.tilesHCount = map.width / map.tileSize;
-    map.tilesVCount = map.height / map.tileSize;
+    // MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
+    // MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
-    MapAddTile(map, 0, 0);
-
-    for (i32 x = 2; x < 14; x++) {
-        MapAddTile(map, x, 5);
-    }
+    // MapAddTile(map, 0, 0);
+    // for (i32 x = 2; x < 14; x++) {
+    //     MapAddTile(map, x, 5);
+    // }
 }
 
 Player * MapSpawnPlayer(Map & map) {
@@ -180,6 +239,7 @@ Circle BulletSizeColliderFromType(v2 p, BulletType type) {
 
 Tank EnemyCreateTank(v2 pos, EnemyType type) {
     Tank tank = {};
+    tank.startingPos = pos;
     tank.pos = pos;
     tank.rot = 0.0f;
     tank.turretRot = 0.0f;
@@ -293,3 +353,172 @@ void MapUpdate(Map & map, f32 dt) {
         }
     }
 }
+
+#include "../vendor/json/json.hpp"
+#include <fstream>
+
+bool MapSaveFile(Map & map, const char * filename) {
+    std::ofstream ss;
+    ss.open(filename, std::ios::out);
+
+    if (!ss.is_open()) {
+        printf("Failed to open file: %s\n", filename);
+        return false;
+    }
+
+    nlohmann::json j;
+
+    j["MapVersion"] = map.version;
+    j["Size"] = MapSizeToString(map.size);
+    j["SinglePlayerMap"] = map.isSinglePlayerMap;
+
+    j["Player1"] = { map.localPlayer.tank.pos.x, map.localPlayer.tank.pos.y };
+    j["Player2"] = { map.remotePlayer.tank.pos.x, map.remotePlayer.tank.pos.y };
+
+    for (i32 i = 0; i < MAX_ENEMIES; i++) {
+        Enemy & enemy = map.enemies[i];
+        if (enemy.active) {
+            j["Enemies"].push_back({ enemy.type, enemy.tank.pos.x, enemy.tank.pos.y });
+        }
+    }
+
+    for (i32 i = 0; i < map.tileCount; i++) {
+        MapTile & tile = map.tiles[i];
+        j["Tiles"].push_back({ tile.xIndex, tile.yIndex });
+    }
+
+    ss << j.dump(4);
+
+    ss.close();
+
+    return true;
+}
+
+bool MapLoadFile(Map & map, const char * filename) {
+    ZeroStruct(map);
+
+    std::ifstream ss;
+    ss.open(filename, std::ios::in);
+
+    if (!ss.is_open()) {
+        printf("Failed to open file: %s\n", filename);
+        return false;
+    }
+
+    nlohmann::json j;
+    ss >> j;
+
+    MapVersion version = (MapVersion)j["MapVersion"];
+    if (version != MAP_VERSION_1) {
+        printf("Map version not supported: %d\n", version);
+        return false;
+    }
+
+    map.version = version;
+
+    std::string sizeStr = j["Size"];
+    map.size = MapSizeFromString(sizeStr.c_str());
+    map.isSinglePlayerMap = j["SinglePlayerMap"];
+
+    map.localPlayer.tank.pos.x = j["Player1"][0];
+    map.localPlayer.tank.pos.y = j["Player1"][1];
+
+    map.remotePlayer.tank.pos.x = j["Player2"][0];
+    map.remotePlayer.tank.pos.y = j["Player2"][1];
+
+    for (auto & enemy : j["Enemies"]) {
+        EnemyType type = (EnemyType)enemy[0];
+        v2 pos = { enemy[1], enemy[2] };
+        MapSpawnEnemy(map, type, pos);
+    }
+
+    MapSizeGetDimensions(map.size, &map.width, &map.height);
+    map.tileSize = 50;
+    map.tilesHCount = map.width / map.tileSize;
+    map.tilesVCount = map.height / map.tileSize;
+    for (auto & tile : j["Tiles"]) {
+        i32 x = tile[0];
+        i32 y = tile[1];
+        MapAddTile(map, x, y);
+    }
+
+    return true;
+}
+
+
+// // We are going to be sad and use the std... :(
+// #include <fstream>
+// #include <sstream>
+// bool MapSaveFile(Map & map, const char * filename) {
+//     std::ofstream ss;
+//     ss.open(filename, std::ios::out);
+
+//     if (!ss.is_open()) {
+//         printf("Failed to open file: %s\n", filename);
+//         return false;
+//     }
+
+//     ss << "MapVersion=" << map.version << "\n";
+
+//     ss << "Size=" << MapSizeToString(map.size) << "\n";
+//     ss << "SinglePlayerMap=" << map.isSinglePlayerMap << "\n";
+
+//     ss << "Player1=" << (i32)map.localPlayer.tank.pos.x << "," << (i32)map.localPlayer.tank.pos.y << "\n";
+//     ss << "Player2=" << (i32)map.remotePlayer.tank.pos.x << "," << (i32)map.remotePlayer.tank.pos.y << "\n";
+
+//     ss << "EnemyCount=" << MapGetEnemyCount(map) << "\n";
+//     for (i32 i = 0; i < MAX_ENEMIES; i++) {
+//         Enemy & enemy = map.enemies[i];
+//         if (enemy.active) {
+//             ss << "Enemy=" << enemy.type << "," << (i32)enemy.tank.pos.x << "," << (i32)enemy.tank.pos.y << "\n";
+//         }
+//     }
+
+//     ss << "TileCount=" << map.tileCount << "\n";
+//     for (i32 i = 0; i < map.tileCount; i++) {
+//         MapTile & tile = map.tiles[i];
+//         ss << tile.xIndex << "," << tile.yIndex << "\n";
+//     }
+
+//     ss.close();
+
+//     return true;
+// }
+
+// // Synax like KEY=VALUE
+// static void GetStringTuple(std::string &line, std::string & a, std::string & b) {
+//     std::stringstream ss(line);
+//     std::getline(ss, a, '=');
+//     std::getline(ss, b, '=');
+// }
+
+// bool MapLoadFile(Map & map, const char * filename) {
+//     std::ifstream ss;
+//     ss.open(filename, std::ios::in);
+
+//     if (!ss.is_open()) {
+//         printf("Failed to open file: %s\n", filename);
+//         return false;
+//     }
+
+//     std::string line;
+//     while (std::getline(ss, line)) {
+//         std::string key;
+//         std::string value;
+//         GetStringTuple(line, key, value);
+//         //printf("Key: %s, Value: %s\n", key.c_str(), value.c_str());
+
+//         if (key == "MapVersion") {
+//             MapVersion version = (MapVersion)std::stoi(value);
+//             if (version != MAP_VERSION_1) {
+//                 printf("Map version not supported: %d\n", version);
+//                 return false;
+//             }
+//             map.version = version;
+//         } else if (key == "Size") {
+
+//         }
+//     }
+
+//     return true;
+// }

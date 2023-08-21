@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "map": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "xiosbase": "cpp"
     }
 }

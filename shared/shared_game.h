@@ -19,6 +19,7 @@ struct Bullet {
 };
 
 struct Tank {
+    v2 startingPos;
     v2 pos;
     v2 remotePos;
     f32 rot;
@@ -70,7 +71,6 @@ struct MapTile {
     i32 yIndex;
     Rect rect;
 };
-
 
 enum MapGameOverReason {
     MAP_GAME_OVER_REASON_INVALID = 0,
@@ -126,6 +126,20 @@ struct GamePacket {
     };
 };
 
+enum MapSize {
+    MAP_SIZE_INVALID = 0,
+    MAP_SIZE_SMALL,
+    MAP_SIZE_MEDIUM,
+    MAP_SIZE_LARGE,
+    MAP_SIZE_COUNT,
+};
+
+enum MapVersion {
+    MAP_VERSION_INVALID = 0,
+    MAP_VERSION_1,
+    MAP_VERSION_COUNT,
+};
+
 #define MAX_BULLETS 256
 #define MAX_ENEMIES 256
 #define MAX_MAP_TILES 256
@@ -133,6 +147,9 @@ struct GamePacket {
 
 struct Map {
     bool isAuthoritative;
+    bool isSinglePlayerMap;
+    MapSize size;
+    MapVersion version;
     i32 width;
     i32 height;
 
@@ -145,7 +162,6 @@ struct Map {
     i32 tilesVCount;
     MapTile tiles[MAX_MAP_TILES];
 
-    bool isMultiplayer;
     i32 packetCount;
     GamePacket mpPackets[MAX_MAP_PACKETS];
 
@@ -169,7 +185,11 @@ Tank        EnemyCreateTank(v2 pos, EnemyType type);
 
 i32         MapGetEnemyCount(Map & map);
 
-void        MapStart(Map & map, i32 mapWidth, i32 mapHeight, bool isAuthoritative);
+void            MapSizeGetDimensions(MapSize size, i32 * width, i32 * height);
+const char *    MapSizeToString(MapSize size);
+MapSize         MapSizeFromString(const char * str);
+
+void        MapStart(Map & map, bool isAuthoritative);
 
 Player *    MapSpawnPlayer(Map & map);
 Bullet *    MapSpawnBullet(Map & map, v2 pos, v2 dir, BulletType type);
@@ -177,10 +197,13 @@ Enemy *     MapSpawnEnemy(Map & map, EnemyType type, v2 pos);
 void        MapDestroyEnemy(Map & map, i32 index);
 MapTile *   MapGetTileAtPos(Map & map, v2 pos);
 
-void            MapClearPackets(Map & map);
-GamePacket *    MapAddGamePacket(Map & map);
+void         MapClearPackets(Map & map);
+GamePacket * MapAddGamePacket(Map & map);
 
 void        MapUpdate(Map & map, f32 dt);
+
+bool        MapSaveFile(Map & map, const char * filename);
+bool        MapLoadFile(Map & map, const char * filename);
 
 // Setting values
 constexpr i32 GAME_TICKS_PER_SECOND = 30;

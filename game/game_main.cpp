@@ -109,7 +109,6 @@ enum ScreenType {
 };
 
 int main(int argc, char * argv[]) {
-
     const char * iniPath = "player_one.ini";
     if (argc == 2) {
         iniPath = argv[1];
@@ -130,8 +129,9 @@ int main(int argc, char * argv[]) {
 
     SetWindowPosition(gameSettings.posX, gameSettings.posY);
 
-    i32 surfaceWidth = 1280;
-    i32 surfaceHeight = 720;
+    i32 surfaceWidth = 0;
+    i32 surfaceHeight = 0;
+    MapSizeGetDimensions(MAP_SIZE_MEDIUM, &surfaceWidth, &surfaceHeight);  // TODO: This will effect text rendering !!
 
     RenderTexture2D surface = LoadRenderTexture(surfaceWidth, surfaceHeight);
     SetTextureFilter(surface.texture, TEXTURE_FILTER_BILINEAR);
@@ -170,7 +170,8 @@ int main(int argc, char * argv[]) {
                     }
                 }
                 if (DrawButton(surfaceWidth / 2, surfaceHeight / 2 - 100, "Single Pringle")) {
-                    MapStart(map, surfaceWidth, surfaceHeight, true);
+                    MapLoadFile(map, "maps/demo.map");
+                    MapStart(map, true);
                     MapSpawnPlayer(map);
                     MapSpawnPlayer(map);
                     screen = SCREEN_TYPE_GAME;
@@ -192,9 +193,11 @@ int main(int argc, char * argv[]) {
             while (NetworkPoll(packet)) {
                 switch (packet.type) {
                 case GAME_PACKET_TYPE_MAP_START: {
-                    MapStart(map, surfaceWidth, surfaceHeight, false);
+                    MapLoadFile(map, "maps/demo.map");
+                    MapStart(map, false);
                     map.localPlayer = packet.mapStart.localPlayer;
                     map.remotePlayer = packet.mapStart.remotePlayer;
+
                     screen = SCREEN_TYPE_GAME;
 
                     printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
@@ -249,29 +252,21 @@ int main(int argc, char * argv[]) {
                     accumulator -= GAME_TICK_TIME;
 
                     v2 dir = {};
-                    bool moved = false;
                     if (IsKeyDown(KEY_W)) {
                         dir.y += -1.0f;
-                        moved = true;
                     }
                     if (IsKeyDown(KEY_S)) {
                         dir.y += 1.0f;
-                        moved = true;
                     }
                     if (IsKeyDown(KEY_A)) {
                         dir.x += -1.0f;
-                        moved = true;
                     }
                     if (IsKeyDown(KEY_D)) {
                         dir.x += 1.0f;
-                        moved = true;
                     }
 
-                    if (moved) {
-                        LocalPlayerMove(map, &map.localPlayer, dir);
-                    }
-                    Vector2 p = GetMousePosition();
-                    LocalPlayerLook(map, &map.localPlayer, { p.x, p.y });
+                    LocalPlayerMove(map, &map.localPlayer, dir);
+                    LocalPlayerLook(map, &map.localPlayer, surfaceMouse);
 
                     if (shouldShoot) {
                         LocalPlayerShoot(map, &map.localPlayer);

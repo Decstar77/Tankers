@@ -291,7 +291,8 @@ int main(int argc, char * argv[]) {
                         peerData2->gameSessionIndex = i;
                         peerData2->peerIndex = 1;
 
-                        MapStart(sessions[i].map, 1280, 720, true);
+                        MapLoadFile(sessions[i].map, "maps/demo.map");
+                        MapStart(sessions[i].map, true);
 
                         Player * player1 = MapSpawnPlayer(sessions[i].map);
                         Player * player2 = MapSpawnPlayer(sessions[i].map);
