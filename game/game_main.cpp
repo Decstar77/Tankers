@@ -81,12 +81,53 @@ static void DrawEnemy(Enemy * enemy) {
     DrawTank(enemy->tank.pos, enemy->tank.size, enemy->tank.rot, enemy->tank.turretRot, color);
 }
 
-static bool DrawButton(i32 centerX, i32 centerY, const char * text) {
+enum ColorSlot {
+    COLOR_SLOT_INVALID = 0,
+    COLOR_SLOT_BACKGROUND,
+    COLOR_SLOT_COUNT,
+};
+
+struct UIColors {
+    i32     counts[COLOR_SLOT_COUNT];
+    Color   stacks[COLOR_SLOT_COUNT][8];
+};
+
+static UIColors uiColors = {};
+
+void UIColorsCreate() {
+    uiColors.counts[COLOR_SLOT_BACKGROUND] = 1;
+    uiColors.stacks[COLOR_SLOT_BACKGROUND][0] = LIGHTGRAY;
+}
+
+void UIColorsPush(ColorSlot slot, Color c) {
+    Assert(uiColors.counts[slot] < ArrayCount(uiColors.stacks[slot]));
+    Assert(slot != COLOR_SLOT_INVALID);
+    uiColors.stacks[slot][uiColors.counts[slot]] = c;
+    uiColors.counts[slot]++;
+}
+
+void UIColorsPop(ColorSlot slot) {
+    Assert(uiColors.counts[slot] > 0);
+    Assert(slot != COLOR_SLOT_INVALID);
+    uiColors.counts[slot]--;
+}
+
+Color UIColorsGet(ColorSlot slot) {
+    Assert(uiColors.counts[slot] > 0);
+    Assert(slot != COLOR_SLOT_INVALID);
+    return uiColors.stacks[slot][uiColors.counts[slot] - 1];
+}
+
+static bool DrawButtonCenter(i32 centerX, i32 centerY, const char * text, Rectangle * bb = nullptr) {
     Vector2 textSize = MeasureTextEx(GetFontDefault(), text, 20, 1);
     Vector2 rectSize = { textSize.x + 20, textSize.y + 20 };
     Rectangle rect = { (float)centerX - rectSize.x / 2, (float)centerY - rectSize.y / 2, rectSize.x, rectSize.y };
-    DrawRectangleRec(rect, LIGHTGRAY);
 
+    DrawRectangleRec(rect, UIColorsGet(COLOR_SLOT_BACKGROUND));
+
+    if (bb != nullptr) {
+        *bb = rect;
+    }
 
     Vector2 textPos = { rect.x + rect.width / 2 - textSize.x / 2, rect.y + rect.height / 2 - textSize.y / 2 };
     DrawTextEx(GetFontDefault(), text, textPos, 20, 1, BLACK);
@@ -102,10 +143,88 @@ static bool DrawButton(i32 centerX, i32 centerY, const char * text) {
     return false;
 }
 
+static bool DrawButtonTopLeft(i32 centerX, i32 centerY, const char * text, Rectangle * bb = nullptr) {
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), text, 20, 1);
+    Vector2 rectSize = { textSize.x + 20, textSize.y + 20 };
+    Rectangle rect = { (float)centerX, (float)centerY, rectSize.x, rectSize.y };
+
+    DrawRectangleRec(rect, UIColorsGet(COLOR_SLOT_BACKGROUND));
+
+    if (bb != nullptr) {
+        *bb = rect;
+    }
+
+    Vector2 textPos = { rect.x + rect.width / 2 - textSize.x / 2, rect.y + rect.height / 2 - textSize.y / 2 };
+    DrawTextEx(GetFontDefault(), text, textPos, 20, 1, BLACK);
+
+    Vector2 mousePos = { surfaceMouse.x, surfaceMouse.y };
+    if (CheckCollisionPointRec(mousePos, rect)) {
+        DrawRectangleLinesEx(rect, 2, RED);
+        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void DrawMap(Map & map) {
+    DrawPlayer(&map.localPlayer);
+    DrawPlayer(&map.remotePlayer);
+
+    // DrawEnemies
+    for (i32 i = 0; i < MAX_ENEMIES; i++) {
+        if (map.enemies[i].active == false) {
+            continue;
+        }
+
+        DrawEnemy(&map.enemies[i]);
+    }
+
+    for (i32 i = 0; i < map.tileCount; i++) {
+        MapTile & tile = map.tiles[i];
+        Rect r = tile.rect;
+        Rectangle rect = { r.min.x, r.min.y, r.max.x - r.min.x, r.max.y - r.min.y };
+        DrawRectangleRec(rect, DARKGRAY);
+    }
+
+    // Draw bullets
+    for (i32 i = 0; i < MAX_BULLETS; i++) {
+        Bullet & bullet = map.bullets[i];
+        if (bullet.active) {
+            switch (bullet.type) {
+            case BULLET_TYPE_NORMAL: {
+                f32 size = BulletSizeFromType(bullet.type);
+                DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, size, ORANGE);
+            } break;
+            }
+        }
+    }
+}
+
 enum ScreenType {
     SCREEN_TYPE_MAIN_MENU,
     SCREEN_TYPE_GAME,
     SCREEN_TYPE_GAME_OVER,
+    SCREEN_TYPE_LEVEL_EDITOR,
+};
+
+struct UIToolBar {
+    i32 currentX;
+};
+
+bool ToolBarButton(UIToolBar & tb, const char * text) {
+    UIColorsPush(COLOR_SLOT_BACKGROUND, SKYBLUE);
+    Rectangle bb = {};
+    bool res = DrawButtonTopLeft(tb.currentX, 0, text, &bb);
+    tb.currentX += (i32)bb.width;
+    UIColorsPop(COLOR_SLOT_BACKGROUND);
+    return res;
+}
+
+struct LevelEditor {
+    const char * mapName;
+    UIToolBar tb;
 };
 
 int main(int argc, char * argv[]) {
@@ -136,15 +255,15 @@ int main(int argc, char * argv[]) {
     RenderTexture2D surface = LoadRenderTexture(surfaceWidth, surfaceHeight);
     SetTextureFilter(surface.texture, TEXTURE_FILTER_BILINEAR);
 
+    UIColorsCreate();
+
+    LevelEditor editor = {};
     Map map = {};
     ScreenType screen = SCREEN_TYPE_MAIN_MENU;
 
     bool debugPauseSim = false;
 
     SetTargetFPS(60);
-
-    Camera2D camera = {};
-    camera.zoom = 1.0f;
 
     f32 accumulator = 0.0f;
     while (!WindowShouldClose()) {
@@ -163,18 +282,22 @@ int main(int argc, char * argv[]) {
             // Connect button
             if (NetworkIsConnected() == false) {
                 static const char * text = "Connect";
-                if (DrawButton(surfaceWidth / 2, surfaceHeight / 2, text)) {
+                if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2, text)) {
                     if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
                         //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
                         text = "Connection failed please try again";
                     }
                 }
-                if (DrawButton(surfaceWidth / 2, surfaceHeight / 2 - 100, "Single Pringle")) {
+                if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2 - 100, "Single Pringle")) {
                     MapLoadFile(map, "maps/demo.map");
                     MapStart(map, true);
                     MapSpawnPlayer(map);
                     MapSpawnPlayer(map);
                     screen = SCREEN_TYPE_GAME;
+                }
+
+                if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2 - 50, "Level Editor")) {
+                    screen = SCREEN_TYPE_LEVEL_EDITOR;
                 }
             }
             else {
@@ -225,8 +348,6 @@ int main(int argc, char * argv[]) {
                 }
             }
         }
-
-        BeginMode2D(camera);
 
         if (screen == SCREEN_TYPE_GAME) {
             static bool shouldShoot = false;
@@ -293,42 +414,37 @@ int main(int argc, char * argv[]) {
                 enemy.tank.turretRot = LerpAngle(enemy.tank.turretRot, enemy.tank.remoteTurretRot, 0.1f);
             }
 
-            DrawPlayer(&map.localPlayer);
-            DrawPlayer(&map.remotePlayer);
-
-            // DrawEnemies
-            for (i32 i = 0; i < MAX_ENEMIES; i++) {
-                if (map.enemies[i].active == false) {
-                    continue;
-                }
-
-                DrawEnemy(&map.enemies[i]);
+            DrawMap(map);
+        }
+        else if (screen == SCREEN_TYPE_LEVEL_EDITOR) {
+            if (editor.mapName == nullptr) {
+                editor.mapName = "maps/demo.map";
+                MapLoadFile(map, "maps/demo.map");
+                MapStart(map, true);
             }
 
-            for (i32 i = 0; i < map.tileCount; i++) {
-                MapTile & tile = map.tiles[i];
-                Rect r = tile.rect;
-                Rectangle rect = { r.min.x, r.min.y, r.max.x - r.min.x, r.max.y - r.min.y };
-                DrawRectangleRec(rect, DARKGRAY);
-            }
+            DrawMap(map);
 
-            // Draw bullets
-            for (i32 i = 0; i < MAX_BULLETS; i++) {
-                Bullet & bullet = map.bullets[i];
-                if (bullet.active) {
-                    switch (bullet.type) {
-                    case BULLET_TYPE_NORMAL: {
-                        f32 size = BulletSizeFromType(bullet.type);
-                        DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, size, ORANGE);
-                    } break;
-                    }
+            editor.tb = {};
+            if (ToolBarButton(editor.tb, "New")) {
+            }
+            if (ToolBarButton(editor.tb, "Open")) {
+                const char * file = PlatformFileDialogOpen("maps", "Map Files\0*.map\0");
+                if (file != nullptr) {
+                    printf("Opening file: %s\n", file);
                 }
+            }
+            if (ToolBarButton(editor.tb, "Save")) {
+            }
+            if (ToolBarButton(editor.tb, "Save As")) {
+            }
+            if (ToolBarButton(editor.tb, "Play")) {
+            }
+            if (ToolBarButton(editor.tb, "Main Menu")) {
+                screen = SCREEN_TYPE_MAIN_MENU;
             }
         }
-
-        EndMode2D();
-
-        if (screen == SCREEN_TYPE_GAME_OVER) {
+        else if (screen == SCREEN_TYPE_GAME_OVER) {
             const char * gameOverText = "Game over!!";
             Vector2 textSize = MeasureTextEx(GetFontDefault(), gameOverText, 20, 1);
             Vector2 centerPos = {};
@@ -337,16 +453,18 @@ int main(int argc, char * argv[]) {
             DrawText(gameOverText, (int)centerPos.x, (int)centerPos.y - 40, 20, BLACK);
 
             const char * text = "Main Menu";
-            if (DrawButton(surfaceWidth / 2, surfaceHeight / 2, text)) {
+            if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2, text)) {
                 screen = SCREEN_TYPE_MAIN_MENU;
             }
         }
 
-        std::string fps = "FPS: " + std::to_string(GetFPS());
-        std::string ping = "Ping: " + std::to_string(NetworkGetPing());
+        if (screen == SCREEN_TYPE_GAME) {
+            std::string fps = "FPS: " + std::to_string(GetFPS());
+            std::string ping = "Ping: " + std::to_string(NetworkGetPing());
 
-        DrawText(fps.c_str(), 10, 10, 20, BLACK);
-        DrawText(ping.c_str(), 10, 30, 20, BLACK);
+            DrawText(fps.c_str(), 10, 10, 20, BLACK);
+            DrawText(ping.c_str(), 10, 30, 20, BLACK);
+        }
 
         EndTextureMode();
 
