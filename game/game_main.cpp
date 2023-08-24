@@ -168,6 +168,16 @@ static bool DrawButtonTopLeft(i32 centerX, i32 centerY, const char * text, Recta
     return false;
 }
 
+static void DrawMapTile(MapTile & tile) {
+    Rectangle rect = { tile.rect.min.x, tile.rect.min.y, tile.rect.max.x - tile.rect.min.x, tile.rect.max.y - tile.rect.min.y };
+    DrawRectangleRec(rect, DARKGRAY);
+}
+
+static void DrawMapGhostTile(MapTile & tile) {
+    Rectangle rect = { tile.rect.min.x, tile.rect.min.y, tile.rect.max.x - tile.rect.min.x, tile.rect.max.y - tile.rect.min.y };
+    DrawRectangleRec(rect, Fade(DARKGRAY, 0.5f));
+}
+
 static void DrawMap(Map & map) {
     DrawPlayer(&map.localPlayer);
     DrawPlayer(&map.remotePlayer);
@@ -183,9 +193,7 @@ static void DrawMap(Map & map) {
 
     for (i32 i = 0; i < map.tileCount; i++) {
         MapTile & tile = map.tiles[i];
-        Rect r = tile.rect;
-        Rectangle rect = { r.min.x, r.min.y, r.max.x - r.min.x, r.max.y - r.min.y };
-        DrawRectangleRec(rect, DARKGRAY);
+        DrawMapTile(tile);
     }
 
     // Draw bullets
@@ -210,21 +218,39 @@ enum ScreenType {
 };
 
 struct UIToolBar {
-    i32 currentX;
+    bool vertical;
+    i32 currentP;
 };
 
 bool ToolBarButton(UIToolBar & tb, const char * text) {
-    UIColorsPush(COLOR_SLOT_BACKGROUND, SKYBLUE);
-    Rectangle bb = {};
-    bool res = DrawButtonTopLeft(tb.currentX, 0, text, &bb);
-    tb.currentX += (i32)bb.width;
-    UIColorsPop(COLOR_SLOT_BACKGROUND);
+    bool res = false;
+    if (tb.vertical) {
+        res = DrawButtonTopLeft(0, tb.currentP, text);
+        tb.currentP += 50;
+        return res;
+    }
+    else {
+        Rectangle bb = {};
+        res = DrawButtonTopLeft(tb.currentP, 0, text, &bb);
+        tb.currentP += (i32)bb.width;
+    }
+
     return res;
 }
 
+enum LevelEditorToolMode {
+    LEVEL_EDITOR_TOOL_MODE_INVALID = 0,
+    LEVEL_EDITOR_TOOL_MODE_TILE,
+    LEVEL_EDITOR_TOOL_MODE_P1,
+    LEVEL_EDITOR_TOOL_MODE_P2,
+    LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY,
+    LEVEL_EDITOR_TOOL_MODE_COUNT,
+};
+
 struct LevelEditor {
     const char * mapName;
-    UIToolBar tb;
+    LevelEditorToolMode toolMode;
+    UIToolBar menuTB;
 };
 
 int main(int argc, char * argv[]) {
@@ -424,25 +450,59 @@ int main(int argc, char * argv[]) {
             }
 
             DrawMap(map);
-
-            editor.tb = {};
-            if (ToolBarButton(editor.tb, "New")) {
+            editor.menuTB = {};
+            UIColorsPush(COLOR_SLOT_BACKGROUND, SKYBLUE);
+            if (ToolBarButton(editor.menuTB, "New")) {
             }
-            if (ToolBarButton(editor.tb, "Open")) {
+            if (ToolBarButton(editor.menuTB, "Open")) {
                 const char * file = PlatformFileDialogOpen("maps", "Map Files\0*.map\0");
                 if (file != nullptr) {
                     printf("Opening file: %s\n", file);
                 }
             }
-            if (ToolBarButton(editor.tb, "Save")) {
+            if (ToolBarButton(editor.menuTB, "Save")) {
             }
-            if (ToolBarButton(editor.tb, "Save As")) {
+            if (ToolBarButton(editor.menuTB, "Save As")) {
             }
-            if (ToolBarButton(editor.tb, "Play")) {
+            if (ToolBarButton(editor.menuTB, "Play")) {
             }
-            if (ToolBarButton(editor.tb, "Main Menu")) {
+            if (ToolBarButton(editor.menuTB, "Main Menu")) {
                 screen = SCREEN_TYPE_MAIN_MENU;
             }
+            UIColorsPop(COLOR_SLOT_BACKGROUND);
+
+            UIColorsPush(COLOR_SLOT_BACKGROUND, Fade(ORANGE, 0.5f));
+            if (ToolBarButton(editor.menuTB, "Tile")) {
+                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_TILE;
+            }
+            if (ToolBarButton(editor.menuTB, "P1")) {
+                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_P1;
+            }
+            if (ToolBarButton(editor.menuTB, "P2")) {
+                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_P2;
+            }
+            if (ToolBarButton(editor.menuTB, "Brown Enemy")) {
+                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY;
+            }
+            UIColorsPop(COLOR_SLOT_BACKGROUND);
+
+            switch (editor.toolMode) {
+            case LEVEL_EDITOR_TOOL_MODE_TILE: {
+                v2 mousePos = surfaceMouse;
+                MapTile * tile = MapGetTileAtPos(map, mousePos);
+                if (tile == nullptr) {
+                    MapTile tile = MapEditorGetGhostTile(map, mousePos);
+                    DrawMapGhostTile(tile);
+                    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                        i32 x = (i32)mousePos.x / map.tileSize;
+                        i32 y = (i32)mousePos.y / map.tileSize;
+                        MapAddTile(map, x, y);
+                        printf("Added tile");
+                    }
+                }
+            } break;
+            }
+
         }
         else if (screen == SCREEN_TYPE_GAME_OVER) {
             const char * gameOverText = "Game over!!";

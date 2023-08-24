@@ -189,6 +189,8 @@ void            MapSizeGetDimensions(MapSize size, i32 * width, i32 * height);
 const char *    MapSizeToString(MapSize size);
 MapSize         MapSizeFromString(const char * str);
 
+MapTile     MapEditorGetGhostTile(Map & map, v2 pos);
+void        MapAddTile(Map & map, i32 x, i32 y);
 void        MapStart(Map & map, bool isAuthoritative);
 
 Player *    MapSpawnPlayer(Map & map);

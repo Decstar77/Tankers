@@ -18,7 +18,20 @@ Circle PlayerGetCollider(Player * player) {
     return { player->tank.pos, player->tank.size / 2.0f };
 }
 
-static void MapAddTile(Map & map, i32 x, i32 y) {
+MapTile MapEditorGetGhostTile(Map & map, v2 pos) {
+    i32 x = (i32)(pos.x / map.tileSize);
+    i32 y = (i32)(pos.y / map.tileSize);
+
+    pos = { (f32)x * map.tileSize, (f32)y * map.tileSize };
+
+    MapTile tile = {};
+    tile.pos = pos;
+    tile.size = (f32)map.tileSize;
+    tile.rect = { tile.pos, tile.pos + v2{ tile.size, tile.size } };
+    return tile;
+}
+
+void MapAddTile(Map & map, i32 x, i32 y) {
     if (map.tileCount >= MAX_MAP_TILES) {
         return;
     }
