@@ -191,9 +191,11 @@ static void DrawMap(Map & map) {
         DrawEnemy(&map.enemies[i]);
     }
 
-    for (i32 i = 0; i < map.tileCount; i++) {
+    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
         MapTile & tile = map.tiles[i];
-        DrawMapTile(tile);
+        if (tile.active) {
+            DrawMapTile(tile);
+        }
     }
 
     // Draw bullets
@@ -445,7 +447,8 @@ int main(int argc, char * argv[]) {
         else if (screen == SCREEN_TYPE_LEVEL_EDITOR) {
             if (editor.mapName == nullptr) {
                 editor.mapName = "maps/demo.map";
-                MapLoadFile(map, "maps/demo.map");
+                MapLoadFile(map, "C:/Projects/Play/maps/demo.map");
+                //MapLoadFile(map, "maps/demo.map");
                 MapStart(map, true);
             }
 
@@ -490,9 +493,9 @@ int main(int argc, char * argv[]) {
             case LEVEL_EDITOR_TOOL_MODE_TILE: {
                 v2 mousePos = surfaceMouse;
                 MapTile * tile = MapGetTileAtPos(map, mousePos);
-                if (tile == nullptr) {
-                    MapTile tile = MapEditorGetGhostTile(map, mousePos);
-                    DrawMapGhostTile(tile);
+                if (tile != nullptr && tile->active == false) {
+                    MapTile gTile = MapEditorCreateGhostTile(map, mousePos);
+                    DrawMapGhostTile(gTile);
                     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                         i32 x = (i32)mousePos.x / map.tileSize;
                         i32 y = (i32)mousePos.y / map.tileSize;

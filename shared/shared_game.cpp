@@ -18,7 +18,7 @@ Circle PlayerGetCollider(Player * player) {
     return { player->tank.pos, player->tank.size / 2.0f };
 }
 
-MapTile MapEditorGetGhostTile(Map & map, v2 pos) {
+MapTile MapEditorCreateGhostTile(Map & map, v2 pos) {
     i32 x = (i32)(pos.x / map.tileSize);
     i32 y = (i32)(pos.y / map.tileSize);
 
@@ -32,14 +32,14 @@ MapTile MapEditorGetGhostTile(Map & map, v2 pos) {
 }
 
 void MapAddTile(Map & map, i32 x, i32 y) {
-    if (map.tileCount >= MAX_MAP_TILES) {
-        return;
-    }
     if (x < 0 || x >= map.tilesHCount || y < 0 || y >= map.tilesVCount) {
         return;
     }
 
-    MapTile & tile = map.tiles[map.tileCount++];
+    i32 flatIndex = y * map.tilesHCount + x;
+
+    MapTile & tile = map.tiles[flatIndex];
+    tile.active = true;
     tile.xIndex = x;
     tile.yIndex = y;
     tile.flatIndex = y * map.tilesHCount + x;
@@ -116,7 +116,6 @@ void MapStart(Map & map, bool isAuthoritative) {
     Assert(map.size != MAP_SIZE_INVALID);
     map.isAuthoritative = isAuthoritative;
 
-
     // MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });
     // MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 600.0f, 500.0f });
 
@@ -182,7 +181,7 @@ MapTile * MapGetTileAtPos(Map & map, v2 pos) {
     i32 x = (i32)(pos.x / map.tileSize);
     i32 y = (i32)(pos.y / map.tileSize);
     i32 flatIndex = y * map.tilesHCount + x;
-    if (flatIndex < 0 || flatIndex >= map.tileCount) {
+    if (flatIndex < 0 || flatIndex >= MAX_MAP_TILES) {
         return nullptr;
     }
     return &map.tiles[flatIndex];
@@ -321,8 +320,12 @@ void MapUpdate(Map & map, f32 dt) {
                 continue;
             }
 
-            for (i32 tileIndex = 0; tileIndex < map.tileCount; tileIndex++) {
+            for (i32 tileIndex = 0; tileIndex < MAX_MAP_TILES; tileIndex++) {
                 MapTile & tile = map.tiles[tileIndex];
+                if (tile.active == false) {
+                    continue;
+                }
+
                 SweepResult sweep;
                 if (SweepCircleVsRect(bulletCollider, bv, tile.rect, {}, &sweep)) {
                     if (bullet.bounced == false) {
@@ -395,9 +398,11 @@ bool MapSaveFile(Map & map, const char * filename) {
         }
     }
 
-    for (i32 i = 0; i < map.tileCount; i++) {
+    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
         MapTile & tile = map.tiles[i];
-        j["Tiles"].push_back({ tile.xIndex, tile.yIndex });
+        if (tile.active) {
+            j["Tiles"].push_back({ tile.xIndex, tile.yIndex });
+        }
     }
 
     ss << j.dump(4);

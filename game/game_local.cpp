@@ -38,11 +38,13 @@ void LocalPlayerMove(Map & map, Player * player, v2 dir) {
     }
 
     Circle c = PlayerGetCollider(player);
-    for (i32 i = 0; i < map.tileCount; i++) {
+    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
         MapTile & tile = map.tiles[i];
-        CollisionManifold manifold = {};
-        if (CircleVsRect(c, tile.rect, &manifold)) {
-            player->tank.pos = player->tank.pos + manifold.normal * manifold.penetration;
+        if (tile.active) {
+            CollisionManifold manifold = {};
+            if (CircleVsRect(c, tile.rect, &manifold)) {
+                player->tank.pos = player->tank.pos + manifold.normal * manifold.penetration;
+            }
         }
     }
 }

@@ -64,6 +64,7 @@ struct Enemy {
 };
 
 struct MapTile {
+    bool active;
     v2 pos;
     f32 size;
     i32 flatIndex;
@@ -157,7 +158,6 @@ struct Map {
     Enemy enemies[MAX_ENEMIES];
 
     i32 tileSize;
-    i32 tileCount;
     i32 tilesHCount;
     i32 tilesVCount;
     MapTile tiles[MAX_MAP_TILES];
@@ -189,7 +189,7 @@ void            MapSizeGetDimensions(MapSize size, i32 * width, i32 * height);
 const char *    MapSizeToString(MapSize size);
 MapSize         MapSizeFromString(const char * str);
 
-MapTile     MapEditorGetGhostTile(Map & map, v2 pos);
+MapTile     MapEditorCreateGhostTile(Map & map, v2 pos);
 void        MapAddTile(Map & map, i32 x, i32 y);
 void        MapStart(Map & map, bool isAuthoritative);
 
