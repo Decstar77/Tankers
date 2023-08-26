@@ -48,6 +48,17 @@ void MapAddTile(Map & map, i32 x, i32 y) {
     tile.rect = { tile.pos, tile.pos + v2{ tile.size, tile.size } };
 }
 
+void MapRemoveTile(Map & map, i32 x, i32 y) {
+    if (x < 0 || x >= map.tilesHCount || y < 0 || y >= map.tilesVCount) {
+        return;
+    }
+
+    i32 flatIndex = y * map.tilesHCount + x;
+
+    MapTile & tile = map.tiles[flatIndex];
+    ZeroStruct(tile);
+}
+
 void MapSizeGetDimensions(MapSize size, i32 * width, i32 * height) {
     // @TODO: Try some of these sizes
     /* List of 16:9 resolutions/sizes
@@ -114,6 +125,7 @@ MapSize MapSizeFromString(const char * str) {
 void MapStart(Map & map, bool isAuthoritative) {
     Assert(map.version != MAP_VERSION_INVALID);
     Assert(map.size != MAP_SIZE_INVALID);
+    Assert(map.tilesHCount * map.tilesVCount <= MAX_MAP_TILES);
     map.isAuthoritative = isAuthoritative;
 
     // MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, v2{ 200.0f, 500.0f });

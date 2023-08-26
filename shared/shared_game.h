@@ -143,7 +143,7 @@ enum MapVersion {
 
 #define MAX_BULLETS 256
 #define MAX_ENEMIES 256
-#define MAX_MAP_TILES 256
+#define MAX_MAP_TILES 512
 #define MAX_MAP_PACKETS 256
 
 struct Map {
@@ -191,6 +191,7 @@ MapSize         MapSizeFromString(const char * str);
 
 MapTile     MapEditorCreateGhostTile(Map & map, v2 pos);
 void        MapAddTile(Map & map, i32 x, i32 y);
+void        MapRemoveTile(Map & map, i32 x, i32 y);
 void        MapStart(Map & map, bool isAuthoritative);
 
 Player *    MapSpawnPlayer(Map & map);

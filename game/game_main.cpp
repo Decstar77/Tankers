@@ -173,9 +173,9 @@ static void DrawMapTile(MapTile & tile) {
     DrawRectangleRec(rect, DARKGRAY);
 }
 
-static void DrawMapGhostTile(MapTile & tile) {
+static void DrawMapGhostTile(MapTile & tile, Color c = Fade(DARKGRAY, 0.5f)) {
     Rectangle rect = { tile.rect.min.x, tile.rect.min.y, tile.rect.max.x - tile.rect.min.x, tile.rect.max.y - tile.rect.min.y };
-    DrawRectangleRec(rect, Fade(DARKGRAY, 0.5f));
+    DrawRectangleRec(rect, c);
 }
 
 static void DrawMap(Map & map) {
@@ -212,6 +212,23 @@ static void DrawMap(Map & map) {
     }
 }
 
+static f32 tempTextTimer = 0.0f;
+static const char * tempCeterText = "";
+static void SetTempCenterText(const char * text, f32 time) {
+    tempTextTimer = time;
+    tempCeterText = text;
+}
+
+static void DrawTempCenterText(i32 w, i32 h) {
+    if (tempTextTimer > 0.0f) {
+        tempTextTimer -= GetFrameTime();
+        DrawText(tempCeterText, w / 2 - MeasureText(tempCeterText, 20) / 2, h / 2 - 20 / 2, 20, BLACK);
+    }
+    else {
+        tempCeterText = "";
+    }
+}
+
 enum ScreenType {
     SCREEN_TYPE_MAIN_MENU,
     SCREEN_TYPE_GAME,
@@ -224,7 +241,7 @@ struct UIToolBar {
     i32 currentP;
 };
 
-bool ToolBarButton(UIToolBar & tb, const char * text) {
+static bool ToolBarButton(UIToolBar & tb, const char * text) {
     bool res = false;
     if (tb.vertical) {
         res = DrawButtonTopLeft(0, tb.currentP, text);
@@ -254,6 +271,23 @@ struct LevelEditor {
     LevelEditorToolMode toolMode;
     UIToolBar menuTB;
 };
+
+static void ToolBarButtonEditorMode(LevelEditor & editor, LevelEditorToolMode mode, const char * text) {
+    UIColorsPush(COLOR_SLOT_BACKGROUND, Fade(ORANGE, 0.5f));
+    if (editor.toolMode == mode) {
+        UIColorsPush(COLOR_SLOT_BACKGROUND, Fade(GREEN, 0.5f));
+        if (ToolBarButton(editor.menuTB, text)) {
+            editor.toolMode = mode;
+        }
+        UIColorsPop(COLOR_SLOT_BACKGROUND);
+    }
+    else {
+        if (ToolBarButton(editor.menuTB, text)) {
+            editor.toolMode = mode;
+        }
+    }
+    UIColorsPop(COLOR_SLOT_BACKGROUND);
+}
 
 int main(int argc, char * argv[]) {
     const char * iniPath = "player_one.ini";
@@ -464,6 +498,11 @@ int main(int argc, char * argv[]) {
                 }
             }
             if (ToolBarButton(editor.menuTB, "Save")) {
+                if (MapSaveFile(map, editor.mapName)) {
+                    SetTempCenterText("Saved!", 1.0f);
+                } else {
+                    SetTempCenterText("Failed to save!", 1.0f);
+                }
             }
             if (ToolBarButton(editor.menuTB, "Save As")) {
             }
@@ -474,38 +513,43 @@ int main(int argc, char * argv[]) {
             }
             UIColorsPop(COLOR_SLOT_BACKGROUND);
 
-            UIColorsPush(COLOR_SLOT_BACKGROUND, Fade(ORANGE, 0.5f));
-            if (ToolBarButton(editor.menuTB, "Tile")) {
-                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_TILE;
-            }
-            if (ToolBarButton(editor.menuTB, "P1")) {
-                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_P1;
-            }
-            if (ToolBarButton(editor.menuTB, "P2")) {
-                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_P2;
-            }
-            if (ToolBarButton(editor.menuTB, "Brown Enemy")) {
-                editor.toolMode = LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY;
-            }
-            UIColorsPop(COLOR_SLOT_BACKGROUND);
+            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_TILE, "Tile");
+            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_P1, "P1");
+            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_P2, "P2");
+            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY, "Brown Enemy");
 
             switch (editor.toolMode) {
             case LEVEL_EDITOR_TOOL_MODE_TILE: {
                 v2 mousePos = surfaceMouse;
+                if (mousePos.x < 0.0f || mousePos.y < 0.0f || mousePos.x >= surfaceWidth || mousePos.y >= surfaceHeight) {
+                    break;
+                }
                 MapTile * tile = MapGetTileAtPos(map, mousePos);
-                if (tile != nullptr && tile->active == false) {
-                    MapTile gTile = MapEditorCreateGhostTile(map, mousePos);
-                    DrawMapGhostTile(gTile);
-                    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                        i32 x = (i32)mousePos.x / map.tileSize;
-                        i32 y = (i32)mousePos.y / map.tileSize;
-                        MapAddTile(map, x, y);
-                        printf("Added tile");
+                bool altDown = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
+                if (altDown == false) {
+                    if (tile != nullptr && tile->active == false) {
+                        MapTile gTile = MapEditorCreateGhostTile(map, mousePos);
+                        DrawMapGhostTile(gTile);
+                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            i32 x = (i32)mousePos.x / map.tileSize;
+                            i32 y = (i32)mousePos.y / map.tileSize;
+                            MapAddTile(map, x, y);
+                        }
+                    }
+                }
+                else {
+                    if (tile != nullptr && tile->active == true) {
+                        MapTile gTile = MapEditorCreateGhostTile(map, mousePos);
+                        DrawMapGhostTile(gTile, Fade(RED, 0.5f));
+                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            i32 x = (i32)mousePos.x / map.tileSize;
+                            i32 y = (i32)mousePos.y / map.tileSize;
+                            MapRemoveTile(map, x, y);
+                        }
                     }
                 }
             } break;
             }
-
         }
         else if (screen == SCREEN_TYPE_GAME_OVER) {
             const char * gameOverText = "Game over!!";
@@ -528,6 +572,8 @@ int main(int argc, char * argv[]) {
             DrawText(fps.c_str(), 10, 10, 20, BLACK);
             DrawText(ping.c_str(), 10, 30, 20, BLACK);
         }
+
+        DrawTempCenterText(surfaceWidth, surfaceHeight);
 
         EndTextureMode();
 
