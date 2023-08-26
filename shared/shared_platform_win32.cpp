@@ -35,6 +35,30 @@ const char * PlatformFileDialogOpen(const char * path, const char * filter) {
     return nullptr;
 }
 
+const char * PlatformFileDialogSave(const char * path, const char * filter) {
+    static char buffer[1024] = {};
+    buffer[0] = 0;
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = nullptr;
+    ofn.lpstrFile = buffer;
+    ofn.nMaxFile = sizeof(buffer);
+    ofn.lpstrFilter = filter;
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = nullptr;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = path;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    if (GetSaveFileNameA(&ofn)) {
+        return buffer;
+    }
+
+    return nullptr;
+}
+
 #endif
 
 

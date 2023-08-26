@@ -267,7 +267,7 @@ enum LevelEditorToolMode {
 };
 
 struct LevelEditor {
-    const char * mapName;
+    std::string mapName;
     LevelEditorToolMode toolMode;
     UIToolBar menuTB;
 };
@@ -287,6 +287,29 @@ static void ToolBarButtonEditorMode(LevelEditor & editor, LevelEditorToolMode mo
         }
     }
     UIColorsPop(COLOR_SLOT_BACKGROUND);
+}
+
+static void DoLevelModePlayer(LevelEditor & editor, Map & map, Player & player, v2 surfaceMouse) {
+    bool validPlace = true;
+    Circle c = PlayerGetColliderAtPos(&player, surfaceMouse);
+    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
+        MapTile & tile = map.tiles[i];
+        if (tile.active) {
+            CollisionManifold manifold = {};
+            if (CircleVsRect(c, tile.rect, &manifold)) {
+                validPlace = false;
+                break;
+            }
+        }
+    }
+
+    if (validPlace == true) {
+        Color c = player.playerNumber == 1 ? RED : BLUE;
+        DrawTank(surfaceMouse, player.tank.size, 0.0f, 0.0f, Fade(c, 0.5f));
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            player.tank.pos = surfaceMouse;
+        }
+    }
 }
 
 int main(int argc, char * argv[]) {
@@ -310,18 +333,20 @@ int main(int argc, char * argv[]) {
 
     SetWindowPosition(gameSettings.posX, gameSettings.posY);
 
+    bool recreateSufrace = false;
     i32 surfaceWidth = 0;
     i32 surfaceHeight = 0;
-    MapSizeGetDimensions(MAP_SIZE_MEDIUM, &surfaceWidth, &surfaceHeight);  // TODO: This will effect text rendering !!
+    MapSize surfaceMapSize = MAP_SIZE_MEDIUM;
+    MapSizeGetDimensions(surfaceMapSize, &surfaceWidth, &surfaceHeight);  // TODO: This will effect text rendering !!
 
     RenderTexture2D surface = LoadRenderTexture(surfaceWidth, surfaceHeight);
     SetTextureFilter(surface.texture, TEXTURE_FILTER_BILINEAR);
 
     UIColorsCreate();
 
-    LevelEditor editor = {};
-    Map map = {};
-    ScreenType screen = SCREEN_TYPE_MAIN_MENU;
+    static LevelEditor editor = {};
+    static Map map = {};
+    static ScreenType screen = SCREEN_TYPE_MAIN_MENU;
 
     bool debugPauseSim = false;
 
@@ -479,32 +504,58 @@ int main(int argc, char * argv[]) {
             DrawMap(map);
         }
         else if (screen == SCREEN_TYPE_LEVEL_EDITOR) {
-            if (editor.mapName == nullptr) {
+            if (editor.mapName.empty()) {
                 editor.mapName = "maps/demo.map";
                 MapLoadFile(map, "C:/Projects/Play/maps/demo.map");
                 //MapLoadFile(map, "maps/demo.map");
-                MapStart(map, true);
             }
 
             DrawMap(map);
             editor.menuTB = {};
             UIColorsPush(COLOR_SLOT_BACKGROUND, SKYBLUE);
             if (ToolBarButton(editor.menuTB, "New")) {
+                const char * file = PlatformFileDialogSave("maps", "Map Files\0*.map\0");
+                if (file != nullptr) {
+                    printf("Creating map: %s\n", file);
+                    MapCreateEditorNew(map, MAP_SIZE_MEDIUM);
+                    editor.mapName = file;
+                    // Ensure .map extension
+                    if (editor.mapName.find(".map") == std::string::npos) {
+                        editor.mapName += ".map";
+                    }
+                    printf("Saving map: %s\n", file);
+                    bool saved = MapSaveFile(map, editor.mapName.c_str());
+                    if (saved) {
+                        SetTempCenterText("New map!", 3.0f);
+                    }
+                    else {
+                        SetTempCenterText("Failed to create new map!", 3.0f);
+                    }
+                }
             }
             if (ToolBarButton(editor.menuTB, "Open")) {
                 const char * file = PlatformFileDialogOpen("maps", "Map Files\0*.map\0");
                 if (file != nullptr) {
                     printf("Opening file: %s\n", file);
+                    bool loaded = MapLoadFile(map, file);
+                    if (loaded) {
+                        editor.mapName = file;
+                        SetTempCenterText("Opened!", 3.0f);
+                        surfaceMapSize = map.size;
+                        recreateSufrace = true;
+                    }
+                    else {
+                        SetTempCenterText("Failed to open!", 3.0f);
+                    }
                 }
             }
             if (ToolBarButton(editor.menuTB, "Save")) {
-                if (MapSaveFile(map, editor.mapName)) {
+                if (MapSaveFile(map, editor.mapName.c_str())) {
                     SetTempCenterText("Saved!", 1.0f);
-                } else {
+                }
+                else {
                     SetTempCenterText("Failed to save!", 1.0f);
                 }
-            }
-            if (ToolBarButton(editor.menuTB, "Save As")) {
             }
             if (ToolBarButton(editor.menuTB, "Play")) {
             }
@@ -549,6 +600,43 @@ int main(int argc, char * argv[]) {
                     }
                 }
             } break;
+            case LEVEL_EDITOR_TOOL_MODE_P1: {
+                if (surfaceMouse.x < 0.0f || surfaceMouse.y < 0.0f || surfaceMouse.x >= surfaceWidth || surfaceMouse.y >= surfaceHeight) {
+                    break;
+                }
+                DoLevelModePlayer(editor, map, map.localPlayer, surfaceMouse);
+            } break;
+            case LEVEL_EDITOR_TOOL_MODE_P2: {
+                if (surfaceMouse.x < 0.0f || surfaceMouse.y < 0.0f || surfaceMouse.x >= surfaceWidth || surfaceMouse.y >= surfaceHeight) {
+                    break;
+                }
+                DoLevelModePlayer(editor, map, map.remotePlayer, surfaceMouse);
+            } break;
+            case LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY: {
+                if (surfaceMouse.x < 0.0f || surfaceMouse.y < 0.0f || surfaceMouse.x >= surfaceWidth || surfaceMouse.y >= surfaceHeight) {
+                    break;
+                }
+
+                Circle c;// TankGetColliderAtPos(surfaceMouse, 40.0f, 0.0f);
+                bool validPlace = true;
+                for (i32 i = 0; i < MAX_MAP_TILES; i++) {
+                    MapTile & tile = map.tiles[i];
+                    if (tile.active) {
+                        CollisionManifold manifold = {};
+                        if (CircleVsRect(c, tile.rect, &manifold)) {
+                            validPlace = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (validPlace == true) {
+                    DrawTank(surfaceMouse, 40.0f, 0.0f, 0.0f, Fade(LIGHTGRAY, 0.5f));
+                    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                        //MapSpawnEnemy(map, surfaceMouse, ENEMY_TYPE_LIGHT_BROWN);
+                    }
+                }
+            } break;
             }
         }
         else if (screen == SCREEN_TYPE_GAME_OVER) {
@@ -589,6 +677,14 @@ int main(int argc, char * argv[]) {
         DrawTexturePro(surface.texture, r1, r2, {}, 0.0f, WHITE);
 
         EndDrawing();
+
+        if (recreateSufrace) {
+            UnloadRenderTexture(surface);
+            MapSizeGetDimensions(surfaceMapSize, &surfaceWidth, &surfaceHeight);
+            surface = LoadRenderTexture(surfaceWidth, surfaceHeight);
+            SetTextureFilter(surface.texture, TEXTURE_FILTER_BILINEAR);
+            recreateSufrace = false;
+        }
     }
 
     NetoworkDisconnectFromServer();

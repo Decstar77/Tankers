@@ -143,7 +143,7 @@ enum MapVersion {
 
 #define MAX_BULLETS 256
 #define MAX_ENEMIES 256
-#define MAX_MAP_TILES 512
+#define MAX_MAP_TILES 1024
 #define MAX_MAP_PACKETS 256
 
 struct Map {
@@ -174,8 +174,12 @@ struct Map {
     };
 };
 
+Circle      TankGetCollider(Tank * tank);
+ Circle     TankGetColliderAtPos(Tank * tank, v2 pos);
+
 Tank        PlayerCreateTank(v2 pos);
 Circle      PlayerGetCollider(Player * player);
+Circle      PlayerGetColliderAtPos(Player * player, v2 pos);
 
 f32         BulletSpeedFromType(BulletType type);
 f32         BulletSizeFromType(BulletType type);
@@ -192,6 +196,8 @@ MapSize         MapSizeFromString(const char * str);
 MapTile     MapEditorCreateGhostTile(Map & map, v2 pos);
 void        MapAddTile(Map & map, i32 x, i32 y);
 void        MapRemoveTile(Map & map, i32 x, i32 y);
+void        MapCreateBase(Map & map);
+void        MapCreateEditorNew(Map & map, MapSize size);
 void        MapStart(Map & map, bool isAuthoritative);
 
 Player *    MapSpawnPlayer(Map & map);

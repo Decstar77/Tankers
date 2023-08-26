@@ -16,3 +16,4 @@ typedef float f32;
 
 void         PlatformAssert(const char * msg, const char * file, int line);
 const char * PlatformFileDialogOpen(const char * path, const char * filter);
+const char * PlatformFileDialogSave(const char * path, const char * filter);

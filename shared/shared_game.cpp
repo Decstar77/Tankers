@@ -4,6 +4,10 @@
 #include <math.h>
 #include <cstring> // For ubuntu
 
+Circle TankGetCollider(Tank * tank) {
+    return { tank->pos, tank->size / 2.0f };
+}
+
 Tank PlayerCreateTank(v2 pos) {
     Tank tank = {};
     tank.startingPos = pos;
@@ -15,7 +19,13 @@ Tank PlayerCreateTank(v2 pos) {
 }
 
 Circle PlayerGetCollider(Player * player) {
-    return { player->tank.pos, player->tank.size / 2.0f };
+    return TankGetCollider(&player->tank);
+}
+
+Circle PlayerGetColliderAtPos(Player * player, v2 pos) {
+    Circle c = PlayerGetCollider(player);
+    c.pos = pos;
+    return c;
 }
 
 MapTile MapEditorCreateGhostTile(Map & map, v2 pos) {
@@ -122,6 +132,37 @@ MapSize MapSizeFromString(const char * str) {
     }
 }
 
+void MapCreateBase(Map & map) {
+    ZeroStruct(map);
+    map.version = MAP_VERSION_1;
+}
+
+void MapCreateEditorNew(Map & map, MapSize size) {
+    MapCreateBase(map);
+    map.size = size;
+    map.isSinglePlayerMap = true;
+    map.localPlayer.tank.pos.x = 0;
+    map.localPlayer.tank.pos.y = 0;
+    map.remotePlayer.tank.pos.x = 0;
+    map.remotePlayer.tank.pos.y = 0;
+
+    MapSizeGetDimensions(map.size, &map.width, &map.height);
+    map.tileSize = 50;
+    map.tilesHCount = map.width / map.tileSize;
+    map.tilesVCount = map.height / map.tileSize;
+    
+    // Create surrounding walls
+    for (i32 x = 0; x < map.tilesHCount; x++) {
+        MapAddTile(map, x, 0);
+        MapAddTile(map, x, map.tilesVCount - 1);
+    }
+
+    for (i32 y = 0; y < map.tilesVCount; y++) {
+        MapAddTile(map, 0, y);
+        MapAddTile(map, map.tilesHCount - 1, y);
+    }
+}
+
 void MapStart(Map & map, bool isAuthoritative) {
     Assert(map.version != MAP_VERSION_INVALID);
     Assert(map.size != MAP_SIZE_INVALID);
@@ -141,7 +182,6 @@ Player * MapSpawnPlayer(Map & map) {
     if (map.localPlayer.active == false) {
         map.localPlayer.active = true;
         map.localPlayer.playerNumber = 1;
-        map.localPlayer.tank = PlayerCreateTank({ 100.0f, 100.0f });
         map.localPlayer.fireCooldown = 0.0f;
         return &map.localPlayer;
     }
@@ -149,7 +189,6 @@ Player * MapSpawnPlayer(Map & map) {
     if (map.remotePlayer.active == false) {
         map.remotePlayer.active = true;
         map.remotePlayer.playerNumber = 2;
-        map.remotePlayer.tank = PlayerCreateTank({ 200.0f, 100.0f });
         map.remotePlayer.fireCooldown = 0.0f;
         return &map.remotePlayer;
     }
@@ -425,7 +464,7 @@ bool MapSaveFile(Map & map, const char * filename) {
 }
 
 bool MapLoadFile(Map & map, const char * filename) {
-    ZeroStruct(map);
+    MapCreateBase(map);
 
     std::ifstream ss;
     ss.open(filename, std::ios::in);
@@ -450,11 +489,15 @@ bool MapLoadFile(Map & map, const char * filename) {
     map.size = MapSizeFromString(sizeStr.c_str());
     map.isSinglePlayerMap = j["SinglePlayerMap"];
 
-    map.localPlayer.tank.pos.x = j["Player1"][0];
-    map.localPlayer.tank.pos.y = j["Player1"][1];
+    v2 localPlayerPos = { j["Player1"][0], j["Player1"][1] };
+    map.localPlayer.tank = PlayerCreateTank( localPlayerPos );
 
-    map.remotePlayer.tank.pos.x = j["Player2"][0];
-    map.remotePlayer.tank.pos.y = j["Player2"][1];
+    v2 remotePlayerPos = { j["Player2"][0], j["Player2"][1] };
+    map.remotePlayer.tank = PlayerCreateTank( remotePlayerPos );
+
+    // @NOTE: These will be overwritten by the server, but for drawing purposes in the editor, we create them here too.
+    map.localPlayer.playerNumber = 1;
+    map.remotePlayer.playerNumber = 2;
 
     for (auto & enemy : j["Enemies"]) {
         EnemyType type = (EnemyType)enemy[0];
@@ -471,6 +514,10 @@ bool MapLoadFile(Map & map, const char * filename) {
         i32 y = tile[1];
         MapAddTile(map, x, y);
     }
+
+    Assert(map.version != MAP_VERSION_INVALID);
+    Assert(map.size != MAP_SIZE_INVALID);
+    Assert(map.tilesHCount * map.tilesVCount <= MAX_MAP_TILES);
 
     return true;
 }
