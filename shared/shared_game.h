@@ -175,7 +175,7 @@ struct Map {
 };
 
 Circle      TankGetCollider(Tank * tank);
- Circle     TankGetColliderAtPos(Tank * tank, v2 pos);
+Circle      TankGetColliderAtPos(Tank * tank, v2 pos);
 
 Tank        PlayerCreateTank(v2 pos);
 Circle      PlayerGetCollider(Player * player);

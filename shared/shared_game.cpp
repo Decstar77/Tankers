@@ -8,6 +8,12 @@ Circle TankGetCollider(Tank * tank) {
     return { tank->pos, tank->size / 2.0f };
 }
 
+Circle TankGetColliderAtPos(Tank * tank, v2 pos) {
+    Circle c = TankGetCollider(tank);
+    c.pos = pos;
+    return c;
+}
+
 Tank PlayerCreateTank(v2 pos) {
     Tank tank = {};
     tank.startingPos = pos;

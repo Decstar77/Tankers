@@ -71,13 +71,17 @@ static void DrawPlayer(Player * player) {
     DrawTank(player->tank.pos, player->tank.size, player->tank.rot, player->tank.turretRot, color);
 }
 
-static void DrawEnemy(Enemy * enemy) {
-    Color color = LIGHTGRAY;
-    switch (enemy->type) {
-    case ENEMY_TYPE_LIGHT_BROWN: color = { 196, 164, 132, 255 }; break;
-    case ENEMY_TYPE_DARK_BROWN: color = { 128, 64, 0, 255 }; break;
+static Color GetColorForEnemyType(EnemyType type) {
+    switch (type) {
+    case ENEMY_TYPE_LIGHT_BROWN: return { 196, 164, 132, 255 };
+    case ENEMY_TYPE_DARK_BROWN: return { 128, 64, 0, 255 };
     }
 
+    return LIGHTGRAY;
+}
+
+static void DrawEnemy(Enemy * enemy) {
+    Color color = GetColorForEnemyType(enemy->type);
     DrawTank(enemy->tank.pos, enemy->tank.size, enemy->tank.rot, enemy->tank.turretRot, color);
 }
 
@@ -617,23 +621,52 @@ int main(int argc, char * argv[]) {
                     break;
                 }
 
-                Circle c;// TankGetColliderAtPos(surfaceMouse, 40.0f, 0.0f);
-                bool validPlace = true;
-                for (i32 i = 0; i < MAX_MAP_TILES; i++) {
-                    MapTile & tile = map.tiles[i];
-                    if (tile.active) {
-                        CollisionManifold manifold = {};
-                        if (CircleVsRect(c, tile.rect, &manifold)) {
-                            validPlace = false;
-                            break;
+                bool altDown = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
+                if (altDown == false) {
+                    Tank dummyTank = EnemyCreateTank(surfaceMouse, ENEMY_TYPE_LIGHT_BROWN);
+                    Circle c = TankGetColliderAtPos(&dummyTank, surfaceMouse);
+                    bool validPlace = true;
+                    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
+                        MapTile & tile = map.tiles[i];
+                        if (tile.active) {
+                            CollisionManifold manifold = {};
+                            if (CircleVsRect(c, tile.rect, &manifold)) {
+                                validPlace = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (validPlace == true) {
+                        DrawTank(surfaceMouse, dummyTank.size, 0.0f, 0.0f, Fade(GetColorForEnemyType(ENEMY_TYPE_LIGHT_BROWN), 0.5f));
+                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, surfaceMouse);
                         }
                     }
                 }
+                else {
+                    Tank dummyTank = EnemyCreateTank(surfaceMouse, ENEMY_TYPE_LIGHT_BROWN);
+                    Circle c1 = TankGetColliderAtPos(&dummyTank, surfaceMouse);
+                    bool validDelete = false;
+                    i32 deleteIndex = -1;
+                    for (i32 i = 0; i < MAX_ENEMIES; i++) {
+                        Enemy & enemy = map.enemies[i];
+                        if (enemy.active == true) {
+                            Circle c2 = TankGetColliderAtPos(&enemy.tank, enemy.tank.pos);
+                            CollisionManifold manifold = {};
+                            if (CircleVsCircle(c1, c2, &manifold)) {
+                                validDelete = true;
+                                deleteIndex = i;
+                                break;
+                            }
+                        }
+                    }
 
-                if (validPlace == true) {
-                    DrawTank(surfaceMouse, 40.0f, 0.0f, 0.0f, Fade(LIGHTGRAY, 0.5f));
-                    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                        //MapSpawnEnemy(map, surfaceMouse, ENEMY_TYPE_LIGHT_BROWN);
+                    if (validDelete == true) {
+                        DrawTank(surfaceMouse, dummyTank.size, 0.0f, 0.0f, Fade(RED, 0.5f));
+                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            MapDestroyEnemy(map, deleteIndex);
+                        }
                     }
                 }
             } break;
