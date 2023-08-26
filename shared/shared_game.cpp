@@ -146,7 +146,18 @@ void MapCreateBase(Map & map) {
 void MapCreateEditorNew(Map & map, MapSize size) {
     MapCreateBase(map);
     map.size = size;
-    map.isSinglePlayerMap = true;
+    map.isSinglePlayerMap = false;
+
+   v2 localPlayerPos = { 0, 0 };
+    map.localPlayer.tank = PlayerCreateTank( localPlayerPos );
+
+    v2 remotePlayerPos = { 0, 0 };
+    map.remotePlayer.tank = PlayerCreateTank( remotePlayerPos );
+
+    // @NOTE: These will be overwritten by the server, but for drawing purposes in the editor, we create them here too.
+    map.localPlayer.playerNumber = 1;
+    map.remotePlayer.playerNumber = 2;
+
     map.localPlayer.tank.pos.x = 0;
     map.localPlayer.tank.pos.y = 0;
     map.remotePlayer.tank.pos.x = 0;

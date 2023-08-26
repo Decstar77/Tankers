@@ -407,7 +407,7 @@ int main(int argc, char * argv[]) {
             while (NetworkPoll(packet)) {
                 switch (packet.type) {
                 case GAME_PACKET_TYPE_MAP_START: {
-                    MapLoadFile(map, "maps/demo.map");
+                    MapLoadFile(map, "maps/mp_01.map");
                     MapStart(map, false);
                     map.localPlayer = packet.mapStart.localPlayer;
                     map.remotePlayer = packet.mapStart.remotePlayer;
@@ -510,8 +510,8 @@ int main(int argc, char * argv[]) {
         else if (screen == SCREEN_TYPE_LEVEL_EDITOR) {
             if (editor.mapName.empty()) {
                 editor.mapName = "maps/demo.map";
-                MapLoadFile(map, "C:/Projects/Play/maps/demo.map");
-                //MapLoadFile(map, "maps/demo.map");
+                //MapLoadFile(map, "C:/Projects/Play/maps/demo.map");
+                MapLoadFile(map, "maps/demo.map");
             }
 
             DrawMap(map);
@@ -560,8 +560,6 @@ int main(int argc, char * argv[]) {
                 else {
                     SetTempCenterText("Failed to save!", 1.0f);
                 }
-            }
-            if (ToolBarButton(editor.menuTB, "Play")) {
             }
             if (ToolBarButton(editor.menuTB, "Main Menu")) {
                 screen = SCREEN_TYPE_MAIN_MENU;
