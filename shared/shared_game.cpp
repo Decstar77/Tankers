@@ -3,6 +3,7 @@
 #include <memory>
 #include <math.h>
 #include <cstring> // For ubuntu
+#include <cstdio>  // For ubuntu
 
 Circle TankGetCollider(Tank * tank) {
     return { tank->pos, tank->size / 2.0f };
