@@ -17,3 +17,40 @@ typedef float f32;
 void         PlatformAssert(const char * msg, const char * file, int line);
 const char * PlatformFileDialogOpen(const char * path, const char * filter);
 const char * PlatformFileDialogSave(const char * path, const char * filter);
+
+struct StringView {
+    const char * data;
+    int          length;
+};
+
+struct SmallString {
+    char data[64];
+    int  length;
+
+    operator StringView() const {
+        return { data, length };
+    }
+};
+
+struct LargeString {
+    char data[256];
+    int  length;
+
+    operator StringView() const {
+        return { data, length };
+    }
+};
+
+// bool StringEquals(StringView * a, StringView * b);
+// bool StringStartsWith(StringView * str, StringView * substr);
+// bool StringEndsWith(StringView * str, StringView * substr);
+// bool StringContains(StringView * str, StringView * substr);
+
+// void StringCopy(StringView * dst, StringView * src);
+// void StringAppend(StringView * dst, StringView * src);
+// void StringAppend(StringView * dst, const char * src);
+// void StringAppend(StringView * dst, char c);
+// void StringAppend(StringView * dst, int i);
+// void StringAppend(StringView * dst, float f);
+
+// void StringFormat(StringView * dst, const char * fmt, ...);
