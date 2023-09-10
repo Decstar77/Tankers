@@ -48,42 +48,16 @@ static GameSettings ParseConfigFileForGameSettings(Config & config) {
     return settings;
 }
 
-static Config cfg = {};
+static GameSettings CreateDefaultGameSettings() {
+    GameSettings settings = {};
+    settings.width = 1280;
+    settings.height = 720;
+    settings.posX = 200;
+    settings.posY = 200;
+    settings.fullscreen = false;
 
-static void DrawTank(v2 p, f32 size, f32 r, f32 tr, Color c) {
-    Rectangle rect = { p.x, p.y, size, size };
-    Vector2 origin = { size / 2, size / 2 };
-    DrawRectanglePro(rect, origin, RadToDeg(r), c);
-
-    f32 gunRad = 15;
-    Vector2 start = { p.x, p.y };
-    Vector2 end = { p.x + gunRad * cosf(tr), p.y + gunRad * sinf(tr) };
-    DrawLineEx(start, end, 2.0f, BLACK);
-
-#if 0
-    // Draw the colliders
-    DrawCircle((int)p.x, (int)p.y, (int)size / 2.0f, Fade(RED, 0.5f));
-#endif
-}
-
-static void DrawPlayer(Player * player) {
-    Color color = player->playerNumber == 1 ? RED : BLUE;
-    DrawTank(player->tank.pos, player->tank.size, player->tank.rot, player->tank.turretRot, color);
-}
-
-static Color GetColorForEnemyType(EnemyType type) {
-    switch (type) {
-    case ENEMY_TYPE_LIGHT_BROWN: return { 196, 164, 132, 255 };
-    case ENEMY_TYPE_DARK_BROWN: return { 128, 64, 0, 255 };
-    }
-
-    return LIGHTGRAY;
-}
-
-static void DrawEnemy(Enemy * enemy) {
-    Color color = GetColorForEnemyType(enemy->type);
-    DrawTank(enemy->tank.pos, enemy->tank.size, enemy->tank.rot, enemy->tank.turretRot, color);
-}
+    return settings;
+};
 
 enum ColorSlot {
     COLOR_SLOT_INVALID = 0,
@@ -172,50 +146,6 @@ static bool DrawButtonTopLeft(i32 centerX, i32 centerY, const char * text, Recta
     return false;
 }
 
-static void DrawMapTile(MapTile & tile) {
-    Rectangle rect = { tile.rect.min.x, tile.rect.min.y, tile.rect.max.x - tile.rect.min.x, tile.rect.max.y - tile.rect.min.y };
-    DrawRectangleRec(rect, DARKGRAY);
-}
-
-static void DrawMapGhostTile(MapTile & tile, Color c = Fade(DARKGRAY, 0.5f)) {
-    Rectangle rect = { tile.rect.min.x, tile.rect.min.y, tile.rect.max.x - tile.rect.min.x, tile.rect.max.y - tile.rect.min.y };
-    DrawRectangleRec(rect, c);
-}
-
-static void DrawMap(Map & map) {
-    DrawPlayer(&map.localPlayer);
-    DrawPlayer(&map.remotePlayer);
-
-    // DrawEnemies
-    for (i32 i = 0; i < MAX_ENEMIES; i++) {
-        if (map.enemies[i].active == false) {
-            continue;
-        }
-
-        DrawEnemy(&map.enemies[i]);
-    }
-
-    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
-        MapTile & tile = map.tiles[i];
-        if (tile.active) {
-            DrawMapTile(tile);
-        }
-    }
-
-    // Draw bullets
-    for (i32 i = 0; i < MAX_BULLETS; i++) {
-        Bullet & bullet = map.bullets[i];
-        if (bullet.active) {
-            switch (bullet.type) {
-            case BULLET_TYPE_NORMAL: {
-                f32 size = BulletSizeFromType(bullet.type);
-                DrawCircle((int)bullet.pos.x, (int)bullet.pos.y, size, ORANGE);
-            } break;
-            }
-        }
-    }
-}
-
 static f32 tempTextTimer = 0.0f;
 static const char * tempCeterText = "";
 static void SetTempCenterText(const char * text, f32 time) {
@@ -293,38 +223,49 @@ static void ToolBarButtonEditorMode(LevelEditor & editor, LevelEditorToolMode mo
     UIColorsPop(COLOR_SLOT_BACKGROUND);
 }
 
-static void DoLevelModePlayer(LevelEditor & editor, Map & map, Player & player, v2 surfaceMouse) {
-    bool validPlace = true;
-    Circle c = PlayerGetColliderAtPos(&player, surfaceMouse);
-    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
-        MapTile & tile = map.tiles[i];
-        if (tile.active) {
-            CollisionManifold manifold = {};
-            if (CircleVsRect(c, tile.rect, &manifold)) {
-                validPlace = false;
-                break;
-            }
-        }
+static void DoCameraPanning(Camera2D & cam) {
+    f32 speed = 10.0f;
+    if (IsKeyDown(KEY_W)) {
+        cam.target.y -= speed;
     }
-
-    if (validPlace == true) {
-        Color c = player.playerNumber == 1 ? RED : BLUE;
-        DrawTank(surfaceMouse, player.tank.size, 0.0f, 0.0f, Fade(c, 0.5f));
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            player.tank.pos = surfaceMouse;
-        }
+    if (IsKeyDown(KEY_S)) {
+        cam.target.y += speed;
+    }
+    if (IsKeyDown(KEY_A)) {
+        cam.target.x -= speed;
+    }
+    if (IsKeyDown(KEY_D)) {
+        cam.target.x += speed;
+    }
+    if (IsKeyDown(KEY_Q)) {
+        cam.zoom -= 0.1f;
+    }
+    if (IsKeyDown(KEY_E)) {
+        cam.zoom += 0.1f;
     }
 }
 
+static void DrawGeneral(Entity & entity) {
+    Vector2 pos = { FpToFloat(entity.general.pos.x), FpToFloat(entity.general.pos.y) };
+    if (entity.selected) {
+        DrawCircleV(pos, 10, GREEN);
+    }
+    DrawCircleV(pos, 7, RED);
+}
+
 int main(int argc, char * argv[]) {
-    const char * iniPath = "player_one.ini";
+    const char * iniPath = nullptr;
     if (argc == 2) {
         iniPath = argv[1];
     }
 
-    printf("Using ini file: %s\n", iniPath);
-    ReadEntireConfigFile(iniPath, cfg);
-    GameSettings gameSettings = ParseConfigFileForGameSettings(cfg);
+    GameSettings gameSettings = CreateDefaultGameSettings();
+    if (iniPath != nullptr) {
+        printf("Using ini file: %s\n", iniPath);
+        static Config cfg = {};
+        ReadEntireConfigFile(iniPath, cfg);
+        gameSettings = ParseConfigFileForGameSettings(cfg);
+    }
 
     printf("width: %d\n", gameSettings.width);
     printf("height: %d\n", gameSettings.height);
@@ -338,10 +279,8 @@ int main(int argc, char * argv[]) {
     SetWindowPosition(gameSettings.posX, gameSettings.posY);
 
     bool recreateSufrace = false;
-    i32 surfaceWidth = 0;
-    i32 surfaceHeight = 0;
-    MapSize surfaceMapSize = MAP_SIZE_MEDIUM;
-    MapSizeGetDimensions(surfaceMapSize, &surfaceWidth, &surfaceHeight);  // TODO: This will effect text rendering !!
+    i32 surfaceWidth = 1280;
+    i32 surfaceHeight = 720;
 
     RenderTexture2D surface = LoadRenderTexture(surfaceWidth, surfaceHeight);
     SetTextureFilter(surface.texture, TEXTURE_FILTER_BILINEAR);
@@ -349,10 +288,16 @@ int main(int argc, char * argv[]) {
     UIColorsCreate();
 
     static LevelEditor editor = {};
-    static Map map = {};
     static ScreenType screen = SCREEN_TYPE_MAIN_MENU;
 
     bool debugPauseSim = false;
+
+    Map map = {};
+    MapSpawnGeneral(map);
+
+    Camera2D cam = {};
+    cam.zoom = 1.0f;
+    cam.offset = { surfaceWidth / 2.0f, surfaceHeight / 2.0f };
 
     SetTargetFPS(60);
 
@@ -361,339 +306,91 @@ int main(int argc, char * argv[]) {
         f32 scale = Min((f32)GetScreenWidth() / surfaceWidth, (f32)GetScreenHeight() / surfaceHeight);
 
         Vector2 mouse = GetMousePosition();
+        Vector2 mouseDelta = GetMouseDelta();
+        bool mouseMoved = true;
+        if (mouseDelta.x == 0 && mouseDelta.y == 0) {
+            mouseMoved = false;
+        }
+
         surfaceMouse = {};
         surfaceMouse.x = (mouse.x - (GetScreenWidth() - (surfaceWidth * scale)) * 0.5f) / scale;
         surfaceMouse.y = (mouse.y - (GetScreenHeight() - (surfaceHeight * scale)) * 0.5f) / scale;
         surfaceMouse = Clamp(surfaceMouse, { 0, 0 }, { (float)surfaceWidth, (float)surfaceHeight });
 
+        DoCameraPanning(cam);
+
+        Vector2 rayMouseWorld = GetScreenToWorld2D({ surfaceMouse.x, surfaceMouse.y }, cam);
+        v2 mouseWorld = { rayMouseWorld.x, rayMouseWorld.y };
+
+        static v2 startDrag = {};
+        static v2 endDrag = {};
+        static bool dragging = false;
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            startDrag = mouseWorld;
+        }
+
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && mouseMoved) {
+            dragging = true;
+        }
+
+        if (dragging == true) {
+            endDrag = mouseWorld;
+        }
+
+        if (dragging == true && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+            dragging = false;
+            startDrag = {};
+            endDrag = {};
+
+            Rect selectionRect = {};
+            selectionRect.min = Min(startDrag, endDrag);
+            selectionRect.max = Max(startDrag, endDrag);
+
+            for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+                Entity * entity = &map.entities[i];
+                if (entity->inUse) {
+                    Circle c = EntityGetSelectionBounds(entity);
+                    if (CircleVsRect(c, selectionRect)) {
+                        entity->selected = true;
+                    }
+                    else {
+                        entity->selected = false;
+                    }
+                }
+            }
+        }
+
+        if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
+            for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+                Entity * entity = &map.entities[i];
+                if (entity->inUse) {
+                    if (entity->selected) {
+                        entity->general.pos = V2fp(mouseWorld);
+                    }
+                }
+            }
+        }
+
         BeginTextureMode(surface);
+        BeginMode2D(cam);
         ClearBackground(RAYWHITE);
 
-        if (screen == SCREEN_TYPE_MAIN_MENU) {
-            // Connect button
-            if (NetworkIsConnected() == false) {
-                static const char * text = "Connect";
-                if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2, text)) {
-                    if (NetworkConnectToServer("127.0.0.1", 27164) == false) {
-                    //if (NetworkConnectToServer(gameSettings.serverIp, 27164) == false) {
-                        text = "Connection failed please try again";
-                    }
-                }
-                if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2 - 100, "Single Pringle")) {
-                    MapLoadFile(map, "maps/demo.map");
-                    MapStart(map, true);
-                    MapSpawnPlayer(map);
-                    MapSpawnPlayer(map);
-                    screen = SCREEN_TYPE_GAME;
-                }
+        DrawGeneral(map.entities[0]);
 
-                if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2 - 50, "Level Editor")) {
-                    screen = SCREEN_TYPE_LEVEL_EDITOR;
-                }
-            }
-            else {
-                // Show waiting for game text
-                const char * text = "Waiting for game, please wait";
-                Vector2 textSize = MeasureTextEx(GetFontDefault(), text, 20, 1);
-                Vector2 centerPos = {};
-                centerPos.x = surfaceWidth / 2 - textSize.x / 2;
-                centerPos.y = surfaceHeight / 2 - textSize.y / 2;
-                DrawText(text, (int)centerPos.x, (int)centerPos.y, 20, BLACK);
-            }
-        }
-
-        if (NetworkIsConnected()) {
-            GamePacket packet = {};
-            while (NetworkPoll(packet)) {
-                switch (packet.type) {
-                case GAME_PACKET_TYPE_MAP_START: {
-                    MapLoadFile(map, "maps/mp_01.map");
-                    MapStart(map, false);
-                    map.localPlayer = packet.mapStart.localPlayer;
-                    map.remotePlayer = packet.mapStart.remotePlayer;
-
-                    screen = SCREEN_TYPE_GAME;
-
-                    printf("Map start, local player number %d\n", map.localPlayer.playerNumber);
-                } break;
-                case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
-                    MapSpawnBullet(map, packet.shotFired.pos, packet.shotFired.dir, BULLET_TYPE_NORMAL);
-                } break;
-                case GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA: {
-                    map.remotePlayer.tank.remotePos = packet.playerStreamData.pos;
-                    map.remotePlayer.tank.remoteRot = packet.playerStreamData.tankRot;
-                    map.remotePlayer.tank.remoteTurretRot = packet.playerStreamData.turretRot;
-                } break;
-                case GAME_PACKET_TYPE_MAP_GAME_OVER: {
-                    printf("Game over, reason: %s\n", MapGameOverReasonToString(packet.gameOver.reason));
-                    screen = SCREEN_TYPE_GAME_OVER;
-                } break;
-                case GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA: {
-                    for (i32 i = 0; i < packet.entityStreamData.entityCount; i++) {
-                        i32 index = packet.entityStreamData.indices[i];
-                        map.enemies[index].tank.remotePos = packet.entityStreamData.pos[i];
-                        map.enemies[index].tank.remoteRot = packet.entityStreamData.tankRot[i];
-                        map.enemies[index].tank.remoteTurretRot = packet.entityStreamData.turretRot[i];
-                    }
-                } break;
-                }
-            }
-        }
-
-        if (screen == SCREEN_TYPE_GAME) {
-            static bool shouldShoot = false;
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                shouldShoot = true;
-            }
-#if ALLOW_DEBUG_CODE
-            if (IsKeyPressed(KEY_F1)) {
-                debugPauseSim = !debugPauseSim;
-            }
-
-            bool debugStepOne = false;
-            if (IsKeyPressed(KEY_F2)) {
-                debugStepOne = true;
-            }
-#endif
-
-            if (debugPauseSim == false || debugStepOne == true) {
-                float deltaTime = GetFrameTime();
-                accumulator += deltaTime;
-
-                while (accumulator >= GAME_TICK_TIME) {
-                    accumulator -= GAME_TICK_TIME;
-
-                    v2 dir = {};
-                    if (IsKeyDown(KEY_W)) {
-                        dir.y += -1.0f;
-                    }
-                    if (IsKeyDown(KEY_S)) {
-                        dir.y += 1.0f;
-                    }
-                    if (IsKeyDown(KEY_A)) {
-                        dir.x += -1.0f;
-                    }
-                    if (IsKeyDown(KEY_D)) {
-                        dir.x += 1.0f;
-                    }
-
-                    LocalPlayerMove(map, &map.localPlayer, dir);
-                    LocalPlayerLook(map, &map.localPlayer, surfaceMouse);
-
-                    if (shouldShoot) {
-                        LocalPlayerShoot(map, &map.localPlayer);
-                        shouldShoot = false;
-                    }
-
-                    LocalSendStreamData(map);
-                    MapUpdate(map, GAME_TICK_TIME);
-                }
-            }
-
-            map.remotePlayer.tank.pos = Lerp(map.remotePlayer.tank.pos, map.remotePlayer.tank.remotePos, 0.1f);
-            map.remotePlayer.tank.rot = LerpAngle(map.remotePlayer.tank.rot, map.remotePlayer.tank.remoteRot, 0.1f);
-            map.remotePlayer.tank.turretRot = LerpAngle(map.remotePlayer.tank.turretRot, map.remotePlayer.tank.remoteTurretRot, 0.1f);
-
-            for (i32 i = 0; i < MAX_ENEMIES; i++) {
-                if (map.enemies[i].active == false) {
-                    continue;
-                }
-
-                Enemy & enemy = map.enemies[i];
-                enemy.tank.pos = Lerp(enemy.tank.pos, enemy.tank.remotePos, 0.1f);
-                enemy.tank.rot = LerpAngle(enemy.tank.rot, enemy.tank.remoteRot, 0.1f);
-                enemy.tank.turretRot = LerpAngle(enemy.tank.turretRot, enemy.tank.remoteTurretRot, 0.1f);
-            }
-
-            DrawMap(map);
-        }
-        else if (screen == SCREEN_TYPE_LEVEL_EDITOR) {
-            if (editor.mapName.empty()) {
-                editor.mapName = "maps/demo.map";
-                //MapLoadFile(map, "C:/Projects/Play/maps/demo.map");
-                MapLoadFile(map, "maps/demo.map");
-            }
-
-            DrawMap(map);
-            editor.menuTB = {};
-            UIColorsPush(COLOR_SLOT_BACKGROUND, SKYBLUE);
-            if (ToolBarButton(editor.menuTB, "New")) {
-                const char * file = PlatformFileDialogSave("maps", "Map Files\0*.map\0");
-                if (file != nullptr) {
-                    printf("Creating map: %s\n", file);
-                    MapCreateEditorNew(map, MAP_SIZE_MEDIUM);
-                    editor.mapName = file;
-                    // Ensure .map extension
-                    if (editor.mapName.find(".map") == std::string::npos) {
-                        editor.mapName += ".map";
-                    }
-                    printf("Saving map: %s\n", file);
-                    bool saved = MapSaveFile(map, editor.mapName.c_str());
-                    if (saved) {
-                        SetTempCenterText("New map!", 3.0f);
-                    }
-                    else {
-                        SetTempCenterText("Failed to create new map!", 3.0f);
-                    }
-                }
-            }
-            if (ToolBarButton(editor.menuTB, "Open")) {
-                const char * file = PlatformFileDialogOpen("maps", "Map Files\0*.map\0");
-                if (file != nullptr) {
-                    printf("Opening file: %s\n", file);
-                    bool loaded = MapLoadFile(map, file);
-                    if (loaded) {
-                        editor.mapName = file;
-                        SetTempCenterText("Opened!", 3.0f);
-                        surfaceMapSize = map.size;
-                        recreateSufrace = true;
-                    }
-                    else {
-                        SetTempCenterText("Failed to open!", 3.0f);
-                    }
-                }
-            }
-            if (ToolBarButton(editor.menuTB, "Save")) {
-                if (MapSaveFile(map, editor.mapName.c_str())) {
-                    SetTempCenterText("Saved!", 1.0f);
-                }
-                else {
-                    SetTempCenterText("Failed to save!", 1.0f);
-                }
-            }
-            if (ToolBarButton(editor.menuTB, "Main Menu")) {
-                screen = SCREEN_TYPE_MAIN_MENU;
-            }
-            UIColorsPop(COLOR_SLOT_BACKGROUND);
-
-            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_TILE, "Tile");
-            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_P1, "P1");
-            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_P2, "P2");
-            ToolBarButtonEditorMode(editor, LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY, "Brown Enemy");
-
-            switch (editor.toolMode) {
-            case LEVEL_EDITOR_TOOL_MODE_TILE: {
-                v2 mousePos = surfaceMouse;
-                if (mousePos.x < 0.0f || mousePos.y < 0.0f || mousePos.x >= surfaceWidth || mousePos.y >= surfaceHeight) {
-                    break;
-                }
-                MapTile * tile = MapGetTileAtPos(map, mousePos);
-                bool altDown = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
-                if (altDown == false) {
-                    if (tile != nullptr && tile->active == false) {
-                        MapTile gTile = MapEditorCreateGhostTile(map, mousePos);
-                        DrawMapGhostTile(gTile);
-                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                            i32 x = (i32)mousePos.x / map.tileSize;
-                            i32 y = (i32)mousePos.y / map.tileSize;
-                            MapAddTile(map, x, y);
-                        }
-                    }
-                }
-                else {
-                    if (tile != nullptr && tile->active == true) {
-                        MapTile gTile = MapEditorCreateGhostTile(map, mousePos);
-                        DrawMapGhostTile(gTile, Fade(RED, 0.5f));
-                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                            i32 x = (i32)mousePos.x / map.tileSize;
-                            i32 y = (i32)mousePos.y / map.tileSize;
-                            MapRemoveTile(map, x, y);
-                        }
-                    }
-                }
-            } break;
-            case LEVEL_EDITOR_TOOL_MODE_P1: {
-                if (surfaceMouse.x < 0.0f || surfaceMouse.y < 0.0f || surfaceMouse.x >= surfaceWidth || surfaceMouse.y >= surfaceHeight) {
-                    break;
-                }
-                DoLevelModePlayer(editor, map, map.localPlayer, surfaceMouse);
-            } break;
-            case LEVEL_EDITOR_TOOL_MODE_P2: {
-                if (surfaceMouse.x < 0.0f || surfaceMouse.y < 0.0f || surfaceMouse.x >= surfaceWidth || surfaceMouse.y >= surfaceHeight) {
-                    break;
-                }
-                DoLevelModePlayer(editor, map, map.remotePlayer, surfaceMouse);
-            } break;
-            case LEVEL_EDITOR_TOOL_MODE_BROWN_ENEMY: {
-                if (surfaceMouse.x < 0.0f || surfaceMouse.y < 0.0f || surfaceMouse.x >= surfaceWidth || surfaceMouse.y >= surfaceHeight) {
-                    break;
-                }
-
-                bool altDown = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
-                if (altDown == false) {
-                    Tank dummyTank = EnemyCreateTank(surfaceMouse, ENEMY_TYPE_LIGHT_BROWN);
-                    Circle c = TankGetColliderAtPos(&dummyTank, surfaceMouse);
-                    bool validPlace = true;
-                    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
-                        MapTile & tile = map.tiles[i];
-                        if (tile.active) {
-                            CollisionManifold manifold = {};
-                            if (CircleVsRect(c, tile.rect, &manifold)) {
-                                validPlace = false;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (validPlace == true) {
-                        DrawTank(surfaceMouse, dummyTank.size, 0.0f, 0.0f, Fade(GetColorForEnemyType(ENEMY_TYPE_LIGHT_BROWN), 0.5f));
-                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                            MapSpawnEnemy(map, ENEMY_TYPE_LIGHT_BROWN, surfaceMouse);
-                        }
-                    }
-                }
-                else {
-                    Tank dummyTank = EnemyCreateTank(surfaceMouse, ENEMY_TYPE_LIGHT_BROWN);
-                    Circle c1 = TankGetColliderAtPos(&dummyTank, surfaceMouse);
-                    bool validDelete = false;
-                    i32 deleteIndex = -1;
-                    for (i32 i = 0; i < MAX_ENEMIES; i++) {
-                        Enemy & enemy = map.enemies[i];
-                        if (enemy.active == true) {
-                            Circle c2 = TankGetColliderAtPos(&enemy.tank, enemy.tank.pos);
-                            CollisionManifold manifold = {};
-                            if (CircleVsCircle(c1, c2, &manifold)) {
-                                validDelete = true;
-                                deleteIndex = i;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (validDelete == true) {
-                        DrawTank(surfaceMouse, dummyTank.size, 0.0f, 0.0f, Fade(RED, 0.5f));
-                        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                            MapDestroyEnemy(map, deleteIndex);
-                        }
-                    }
-                }
-            } break;
-            }
-        }
-        else if (screen == SCREEN_TYPE_GAME_OVER) {
-            const char * gameOverText = "Game over!!";
-            Vector2 textSize = MeasureTextEx(GetFontDefault(), gameOverText, 20, 1);
-            Vector2 centerPos = {};
-            centerPos.x = surfaceWidth / 2 - textSize.x / 2;
-            centerPos.y = surfaceHeight / 2 - textSize.y / 2;
-            DrawText(gameOverText, (int)centerPos.x, (int)centerPos.y - 40, 20, BLACK);
-
-            const char * text = "Main Menu";
-            if (DrawButtonCenter(surfaceWidth / 2, surfaceHeight / 2, text)) {
-                screen = SCREEN_TYPE_MAIN_MENU;
-            }
-        }
-
-        if (screen == SCREEN_TYPE_GAME) {
-            std::string fps = "FPS: " + std::to_string(GetFPS());
-            std::string ping = "Ping: " + std::to_string(NetworkGetPing());
-
-            DrawText(fps.c_str(), 10, 10, 20, BLACK);
-            DrawText(ping.c_str(), 10, 30, 20, BLACK);
+        if (dragging == true) {
+            v2 topLeft = {};
+            topLeft.x = Min(startDrag.x, endDrag.x);
+            topLeft.y = Min(startDrag.y, endDrag.y);
+            v2 bottomRight = {};
+            bottomRight.x = Max(startDrag.x, endDrag.x);
+            bottomRight.y = Max(startDrag.y, endDrag.y);
+            DrawRectangleRec({ topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y }, Fade(GREEN, 0.5f));
         }
 
         DrawTempCenterText(surfaceWidth, surfaceHeight);
 
+        EndMode2D();
         EndTextureMode();
 
         BeginDrawing();
@@ -708,14 +405,6 @@ int main(int argc, char * argv[]) {
         DrawTexturePro(surface.texture, r1, r2, {}, 0.0f, WHITE);
 
         EndDrawing();
-
-        if (recreateSufrace) {
-            UnloadRenderTexture(surface);
-            MapSizeGetDimensions(surfaceMapSize, &surfaceWidth, &surfaceHeight);
-            surface = LoadRenderTexture(surfaceWidth, surfaceHeight);
-            SetTextureFilter(surface.texture, TEXTURE_FILTER_BILINEAR);
-            recreateSufrace = false;
-        }
     }
 
     NetoworkDisconnectFromServer();

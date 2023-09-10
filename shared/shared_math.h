@@ -62,6 +62,8 @@ v2 operator/(v2 a, f32 b);
 v2 operator*(f32 a, v2 b);
 v2 operator/(f32 a, v2 b);
 
+v2      Min(v2 a, v2 b);
+v2      Max(v2 a, v2 b);
 f32     Dot(v2 a, v2 b);
 v2      Normalize(v2 v);
 v2      Lerp(v2 a, v2 b, f32 t);
@@ -86,10 +88,10 @@ struct CollisionManifold {
     f32 penetration;
 };
 
-v2 ClosestPointOnCircle(v2 point, Circle circle);
-v2 ClosestPointOnRect(v2 point, Rect rect);
-bool CircleVsCircle(Circle c1, Circle c2, CollisionManifold * manifold = nullptr);
-bool CircleVsRect(Circle c, Rect r, CollisionManifold * manifold = nullptr);
+v2      ClosestPointOnCircle(v2 point, Circle circle);
+v2      ClosestPointOnRect(v2 point, Rect rect);
+bool    CircleVsCircle(Circle c1, Circle c2, CollisionManifold * manifold = nullptr);
+bool    CircleVsRect(Circle c, Rect r, CollisionManifold * manifold = nullptr);
 
 struct SweepResult {
     f32 t;
@@ -98,4 +100,60 @@ struct SweepResult {
 
 bool SweepCircleVsCircle(Circle c1, v2 c1_vel, Circle c2, v2 c2_vel, SweepResult * result);
 bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult * result);
+
+struct fp {
+    i32 value;
+};
+
+fp Fp(i32 value);
+fp Fp(f32 value);
+
+f32 FpToFloat(fp a);
+i32 FpToInt(fp a);
+
+fp operator+(fp a, fp b);
+fp operator-(fp a, fp b);
+fp operator*(fp a, fp b);
+fp operator/(fp a, fp b);
+
+bool operator==(fp a, fp b);
+bool operator!=(fp a, fp b);
+bool operator>=(fp a, fp b);
+bool operator<=(fp a, fp b);
+bool operator>(fp a, fp b);
+bool operator<(fp a, fp b);
+
+fp & operator+=(fp & a, fp b);
+fp & operator-=(fp & a, fp b);
+fp & operator*=(fp & a, fp b);
+fp & operator/=(fp & a, fp b);
+
+const fp FP_PI = Fp(3.14159265358979323846f);
+const fp FP_PI2 = Fp(6.28318530717958647692f);
+const fp FP_HALF_PI = Fp(1.57079632679489661923f);
+
+struct v2fp {
+    fp x;
+    fp y;
+
+    fp & operator[](int i) {
+        return (&x)[i];
+    }
+};
+
+v2fp V2fp(fp x, fp y);
+v2fp V2fp(i32 x, i32 y);
+v2fp V2fp(v2 v);
+
+v2   V2(v2fp v);
+
+v2fp operator+(v2fp a, v2fp b);
+v2fp operator-(v2fp a, v2fp b);
+v2fp operator*(v2fp a, fp b);
+v2fp operator/(v2fp a, fp b);
+
+v2fp operator*(fp a, v2fp b);
+v2fp operator/(fp a, v2fp b);
+
+
 

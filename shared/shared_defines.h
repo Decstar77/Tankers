@@ -11,8 +11,17 @@
 #define ArrayCount(a) (sizeof(a) / sizeof((a)[0]))
 #define Stringify(x) #x
 
-typedef int i32;
-typedef float f32;
+typedef short       i16;
+typedef int         i32;
+typedef long long   i64;
+typedef float       f32;
+typedef double      f64;
+
+static_assert(sizeof(i16) == 2, "i16 is not 2 bytes");
+static_assert(sizeof(i32) == 4, "i32 is not 4 bytes");
+static_assert(sizeof(i64) == 8, "i64 is not 8 bytes");
+static_assert(sizeof(f32) == 4, "f32 is not 4 bytes");
+static_assert(sizeof(f64) == 8, "f64 is not 8 bytes");
 
 void         PlatformAssert(const char * msg, const char * file, int line);
 const char * PlatformFileDialogOpen(const char * path, const char * filter);

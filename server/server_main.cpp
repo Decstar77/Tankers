@@ -49,8 +49,6 @@ struct GameSession {
         };
     };
 
-    Map map;
-
     i32 packetCount;
     GamePacket incomingPackets[128];
 };
@@ -88,10 +86,10 @@ static void GameSessionSendToAllPeers(GameSession * session, GamePacket * packet
 }
 
 static void GameSessionGameOverPlayerDisconnected(GameSession * session, int diconnectedPeerIndex) {
-    GamePacket packet = {};
-    packet.type = GAME_PACKET_TYPE_MAP_GAME_OVER;
-    packet.gameOver.reason = MAP_GAME_OVER_REASON_PLAYER_DISCONNECTED;
-    GameSessionSendToPeersExpect(session, &packet, diconnectedPeerIndex, true);
+    // GamePacket packet = {};
+    // packet.type = GAME_PACKET_TYPE_MAP_GAME_OVER;
+    // packet.gameOver.reason = MAP_GAME_OVER_REASON_PLAYER_DISCONNECTED;
+    // GameSessionSendToPeersExpect(session, &packet, diconnectedPeerIndex, true);
 
     session->running = false;
     Deallocate(session->peer1->data);
@@ -199,69 +197,6 @@ int main(int argc, char * argv[]) {
             break;
         }
 
-        for (int gameSessionIndex = 0; gameSessionIndex < MAX_SESSIONS; gameSessionIndex++) {
-            GameSession * session = &sessions[gameSessionIndex];
-            if (session->running) {
-                session->currentTime += deltaTime;
-                while (session->currentTime >= GAME_TICK_TIME) {
-                    session->currentTime -= GAME_TICK_TIME;
-
-                    PeerData * peerData1 = (PeerData *)session->peer1->data;
-                    PeerData * peerData2 = (PeerData *)session->peer2->data;
-
-                    for (int i = 0; i < session->packetCount; i++) {
-                        GamePacket & packet = session->incomingPackets[i];
-                        switch (packet.type) {
-                        case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
-                            MapSpawnBullet(session->map, packet.shotFired.pos, packet.shotFired.dir, BULLET_TYPE_NORMAL);
-
-                            GameSessionSendToPeer(session, &packet, 0, true);
-                            GameSessionSendToPeer(session, &packet, 1, true);
-                        } break;
-                        }
-                    }
-
-                    session->packetCount = 0;
-                    Map & map = session->map;
-                    MapUpdate(map, GAME_TICK_TIME);
-
-                    for (int i = 0; i < map.packetCount; i++) {
-                        GamePacket & packet = map.mpPackets[i];
-                        switch (packet.type) {
-                        case GAME_PACKET_TYPE_MAP_SHOT_FIRED: {
-                            GameSessionSendToPeer(session, &packet, peerData1->peerIndex, true);
-                            GameSessionSendToPeer(session, &packet, peerData2->peerIndex, true);
-                        } break;
-                        }
-                    }
-
-
-                    GamePacket packet = {};
-                    packet.type = GAME_PACKET_TYPE_MAP_ENTITY_STREAM_DATA;
-                    i32 enemyCount = 0;
-                    for (int i = 0; i < MAX_ENEMIES; i++) {
-                        Enemy & enemy = map.enemies[i];
-                        if (enemy.active) {
-                            packet.entityStreamData.indices[enemyCount] = i;
-                            packet.entityStreamData.pos[enemyCount] = enemy.tank.pos;
-                            packet.entityStreamData.tankRot[enemyCount] = enemy.tank.rot;
-                            packet.entityStreamData.turretRot[enemyCount] = enemy.tank.turretRot;
-                            enemyCount++;
-                            if (enemyCount == 20) {
-                                break;
-                            }
-                        }
-
-                    }
-                    packet.entityStreamData.entityCount = enemyCount;
-
-                    GameSessionSendToAllPeers(session, &packet, false);
-
-                    session->tickNumber++;
-                }
-            }
-        }
-
         switch (event.type) {
         case ENET_EVENT_TYPE_CONNECT: {
             char ip[32] = {};
@@ -291,25 +226,25 @@ int main(int argc, char * argv[]) {
                         peerData2->gameSessionIndex = i;
                         peerData2->peerIndex = 1;
 
-                        MapLoadFile(sessions[i].map, "maps/mp_01.map");
-                        MapStart(sessions[i].map, true);
+                        // MapLoadFile(sessions[i].map, "maps/mp_01.map");
+                        // MapStart(sessions[i].map, true);
 
-                        Player * player1 = MapSpawnPlayer(sessions[i].map);
-                        Player * player2 = MapSpawnPlayer(sessions[i].map);
+                        // Player * player1 = MapSpawnPlayer(sessions[i].map);
+                        // Player * player2 = MapSpawnPlayer(sessions[i].map);
 
-                        peerData1->playerNumber = player1->playerNumber;
-                        peerData2->playerNumber = player2->playerNumber;
+                        // peerData1->playerNumber = player1->playerNumber;
+                        // peerData2->playerNumber = player2->playerNumber;
 
-                        GamePacket packet = {};
-                        packet.type = GAME_PACKET_TYPE_MAP_START;
+                        // GamePacket packet = {};
+                        // packet.type = GAME_PACKET_TYPE_MAP_START;
 
-                        packet.mapStart.localPlayer = *player1;
-                        packet.mapStart.remotePlayer = *player2;
-                        GameSessionSendToPeer(&sessions[i], &packet, 0, true);
+                        // packet.mapStart.localPlayer = *player1;
+                        // packet.mapStart.remotePlayer = *player2;
+                        // GameSessionSendToPeer(&sessions[i], &packet, 0, true);
 
-                        packet.mapStart.localPlayer = *player2;
-                        packet.mapStart.remotePlayer = *player1;
-                        GameSessionSendToPeer(&sessions[i], &packet, 1, true);
+                        // packet.mapStart.localPlayer = *player2;
+                        // packet.mapStart.remotePlayer = *player1;
+                        // GameSessionSendToPeer(&sessions[i], &packet, 1, true);
 
                         printf("Starting game session %d\n", i);
 
@@ -328,15 +263,15 @@ int main(int argc, char * argv[]) {
             GamePacket * gamePacket = (GamePacket *)event.packet->data;
             PeerData * peerData = (PeerData *)event.peer->data;
             if (peerData->gameSessionIndex != -1) {
-                if (gamePacket->type == GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA) {
-                    GameSessionSendToPeersExpect(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, peerData->peerIndex, false);
-                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.pos = gamePacket->playerStreamData.pos;
-                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.rot = gamePacket->playerStreamData.tankRot;
-                    sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.turretRot = gamePacket->playerStreamData.turretRot;
-                }
-                else {
-                    sessions[peerData->gameSessionIndex].incomingPackets[sessions[peerData->gameSessionIndex].packetCount++] = *gamePacket;
-                }
+                // if (gamePacket->type == GAME_PACKET_TYPE_MAP_PLAYER_STREAM_DATA) {
+                //     GameSessionSendToPeersExpect(&sessions[peerData->gameSessionIndex], (GamePacket *)event.packet->data, peerData->peerIndex, false);
+                //     sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.pos = gamePacket->playerStreamData.pos;
+                //     sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.rot = gamePacket->playerStreamData.tankRot;
+                //     sessions[peerData->gameSessionIndex].map.players[peerData->playerNumber - 1].tank.turretRot = gamePacket->playerStreamData.turretRot;
+                // }
+                // else {
+                //     sessions[peerData->gameSessionIndex].incomingPackets[sessions[peerData->gameSessionIndex].packetCount++] = *gamePacket;
+                // }
             }
             else {
                 printf("Received packet from peer without game session\n");

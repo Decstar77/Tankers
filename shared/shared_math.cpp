@@ -27,6 +27,14 @@ v2 operator/(f32 a, v2 b) {
     return { a / b.x, a / b.y };
 }
 
+v2 Min(v2 a, v2 b) {
+    return { Min(a.x, b.x), Min(a.y, b.y) };
+}
+
+v2 Max(v2 a, v2 b) {
+    return { Max(a.x, b.x), Max(a.y, b.y) };
+}
+
 f32 Dot(v2 a, v2 b) {
     return a.x * b.x + a.y * b.y;
 }
@@ -255,3 +263,109 @@ bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult * resul
 
     return true;
 }
+
+fp Fp(i32 value) {
+    fp p = {};
+    p.value = value << 16;
+    return p;
+}
+
+fp Fp(f32 f) {
+    fp p = {};
+    p.value = i32(f * f32(1 << 16) + (f >= 0 ? 0.5 : 0.5));
+    return p;
+}
+
+f32 FpToFloat(fp a) {
+    return f32(a.value) / f32(1 << 16);
+}
+
+i32 FpToInt(fp a) {
+    return a.value >> 16;
+}
+
+fp operator+(fp a, fp b) {
+    fp p = {};
+    p.value = a.value + b.value;
+    return p;
+}
+
+fp operator-(fp a, fp b) {
+    fp p = {};
+    p.value = a.value - b.value;
+    return p;
+}
+
+fp operator*(fp a, fp b) {
+    fp p = {};
+    p.value = i32((i64(a.value) * i64(b.value)) >> 16);
+    return p;
+}
+
+fp operator/(fp a, fp b) {
+    fp p = {};
+    p.value = i32((i64(a.value) << 16) / i64(b.value));
+    return p;
+}
+
+bool operator==(fp a, fp b) {
+    return a.value == b.value;
+}
+
+bool operator!=(fp a, fp b) {
+    return a.value != b.value;
+}
+
+bool operator>=(fp a, fp b) {
+    return a.value >= b.value;
+}
+
+bool operator<=(fp a, fp b) {
+    return a.value <= b.value;
+}
+
+bool operator>(fp a, fp b) {
+    return a.value > b.value;
+}
+
+bool operator<(fp a, fp b) {
+    return a.value < b.value;
+}
+
+fp & operator+=(fp & a, fp b) {
+    a.value += b.value;
+    return a;
+}
+
+fp & operator-=(fp & a, fp b) {
+    a.value -= b.value;
+    return a;
+}
+
+fp & operator*=(fp & a, fp b) {
+    a.value = i32((i64(a.value) * i64(b.value)) >> 16);
+    return a;
+}
+
+fp & operator/=(fp & a, fp b) {
+    a.value = i32((i64(a.value) << 16) / i64(b.value));
+    return a;
+}
+
+v2fp V2fp(fp x, fp y) {
+    return { x, y };
+}
+
+v2fp V2fp(i32 x, i32 y) {
+    return { Fp(x), Fp(y) };
+}
+
+v2fp V2fp(v2 v) {
+    return { Fp(v.x), Fp(v.y) };
+}
+
+v2 V2(v2fp v) {
+    return { FpToFloat(v.x), FpToFloat(v.y) };
+}
+
+
