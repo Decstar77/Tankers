@@ -284,6 +284,10 @@ i32 FpToInt(fp a) {
     return a.value >> 16;
 }
 
+i64 I64(fp f) {
+    return (i64)FpToInt(f);
+}
+
 fp operator+(fp a, fp b) {
     fp p = {};
     p.value = a.value + b.value;
@@ -367,5 +371,30 @@ v2fp V2fp(v2 v) {
 v2 V2(v2fp v) {
     return { FpToFloat(v.x), FpToFloat(v.y) };
 }
+
+v2fp operator+(v2fp a, v2fp b) {
+    return { a.x + b.x, a.y + b.y };
+}
+
+v2fp operator-(v2fp a, v2fp b) {
+    return { a.x - b.x, a.y - b.y };
+}
+
+v2fp operator*(v2fp a, fp b) {
+    return { a.x * b, a.y * b };
+}
+
+v2fp operator/(v2fp a, fp b) {
+    return { a.x / b, a.y / b };
+}
+
+v2fp operator*(fp a, v2fp b) {
+    return { a * b.x, a * b.y };
+}
+
+v2fp operator/(fp a, v2fp b) {
+    return { a / b.x, a / b.y };
+}
+
 
 

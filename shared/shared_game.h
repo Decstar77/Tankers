@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shared_math.h"
+#include "shared_containers.h"
 
 enum MapSize {
     MAP_SIZE_INVALID = 0,
@@ -23,6 +24,8 @@ struct Grunt {
 #define MAX_GRUNTS 50
 struct General {
     v2fp pos;
+    v2fp target;
+    v2 visPos;
     i32 gruntCount;
     Grunt grunts[MAX_GRUNTS];
 };
@@ -36,6 +39,7 @@ struct Entity {
     bool inUse;
     EntityId id;
     bool selected;
+    i32 playerNumber;
     union {
         General general;
     };
@@ -53,7 +57,8 @@ struct Map {
     i32 width;
     i32 height;
 
-    i32 tickNumber;
+    bool isSinglePlayer;
+    i32 turnNumber;
 
     i32         selectionCount;
     EntityId    selection[MAX_MAP_ENTITIES];
@@ -61,46 +66,67 @@ struct Map {
     Entity      entities[MAX_MAP_ENTITIES];
 };
 
-enum MapActionType {
-    MAP_ACTION_INVALID = 0,
-    MAP_ACTION_MOVE_UNITS,
-    MAP_ACTION_COUNT,
+enum MapCommandType {
+    MAP_COMMAND_INVALID = 0,
+    MAP_COMMAND_MOVE_UNITS,
+    MAP_COMMAND_COUNT,
 };
 
-struct MapAction {
-    MapActionType   type;
+struct MapCommand {
+    MapCommandType   type;
     i32             entitiesCount;
-    EntityId        entities[10];
+    EntityId        entities[5];
     v2fp            target;
 };
 
 struct MapTurn {
-    i32 tickNumber;
-    i32 actionsCount;
-    MapAction actions[10];
+    i64 checkSum;
+    i32 turnNumber;
+    i32 commandCount;
+    MapCommand cmds[5];
 };
 
 Circle EntityGetSelectionBounds(Entity * entity);
 
-void MapCreate(Map & map);
+void MapCreate(Map & map, bool singlePlayer);
 void MapStart(Map & map);
 
-Entity * MapSpawnEntity(Map & map);
-Entity * MapSpawnGeneral(Map & map);
+Entity * MapSpawnEntity(Map & map, i32 playerNumber);
+Entity * MapSpawnGeneral(Map & map, i32 playerNumber);
+Entity * MapSpawnGeneral(Map & map, i32 playerNumber, v2fp pos);
 
-void MapApplyAction(Map & map, const MapAction & action);
+void MapCreateCommand(Map & map, MapCommand & action, MapCommandType type);
+void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & action, v2fp target);
 
-void MapDoTurn(Map & map, const MapTurn & turn);
-void MapDoTick(Map & map);
+void MapApplyCommand(Map & map, const MapCommand & action);
+void MapApplyTurn(Map & map, const MapTurn & turn);
+i64  MapMakeTurnCheckSum(Map & map);
+void MapDoTurn(Map & map, MapTurn & player1, MapTurn & player2);
 
 void MapDestroy(Map & map);
 
-struct GamePacket {
+enum GamePacketType {
+    GAME_PACKET_TYPE_INVALID = 0,
+    GAME_PACKET_TYPE_MAP_START,
+    GAME_PACKET_TYPE_MAP_TURN,
+    GAME_PACKET_TYPE_COUNT,
+};
 
+struct GamePacket {
+    GamePacketType type;
+    union {
+        struct {
+            i32 localPlayerNumber;
+        } mapStart;
+        struct {
+            i32 playerNumber;
+            MapTurn mapTurn;
+        };
+    };
 };
 
 // Setting values
-constexpr i32 GAME_TICKS_PER_SECOND = 30;
+constexpr i32 GAME_TICKS_PER_SECOND = 60;
 constexpr i32 GAME_MAX_BYTES_PER_MS = 30;
 
 // Calculated values

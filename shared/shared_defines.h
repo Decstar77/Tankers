@@ -3,11 +3,29 @@
 #define ALLOW_DEBUG_CODE 1
 
 #define FILE_NAME __FILE__
+#define FUNCTION_NAME __func__
 #define LINE_NUMBER __LINE__
 
-#define Assert(x) if (!(x)) { printf(#x); PlatformAssert(#x, FILE_NAME, LINE_NUMBER);  *(int *)0 = 0; }
-#define ZeroStruct(s) memset(&(s), 0, sizeof(s))
-#define ZeroMemory(s, n) memset((s), 0, (n))
+#define Assert(x)                                                               \
+    {                                                                           \
+        if (!(x)) {                                                             \
+            printf(#x);                                                         \
+            PlatformAssert(#x, FILE_NAME, FUNCTION_NAME, LINE_NUMBER);          \
+            *(int *)0 = 0;                                                      \
+        }                                                                       \
+    }
+
+#define AssertMsg(expr, msg)                                                    \
+    {                                                                           \
+        if (expr) {                                                             \
+        } else {                                                                \
+            PlatformAssert(msg, FILE_NAME, FUNCTION_NAME, LINE_NUMBER);         \
+        }                                                                       \
+    }
+
+
+#define ZeroStruct(s) MemorySet(&(s), 0, sizeof(s))
+#define ZeroMemory(s, n) MemorySet((s), 0, (n))
 #define ArrayCount(a) (sizeof(a) / sizeof((a)[0]))
 #define Stringify(x) #x
 
@@ -23,43 +41,22 @@ static_assert(sizeof(i64) == 8, "i64 is not 8 bytes");
 static_assert(sizeof(f32) == 4, "f32 is not 4 bytes");
 static_assert(sizeof(f64) == 8, "f64 is not 8 bytes");
 
-void         PlatformAssert(const char * msg, const char * file, int line);
+typedef unsigned char       u8;
+typedef unsigned short      u16;
+typedef unsigned int        u32;
+typedef unsigned long long  u64;
+
+static_assert(sizeof(u8) == 1, "Expected uint8 to be 1 byte.");
+static_assert(sizeof(u16) == 2, "Expected uint16 to be 2 bytes.");
+static_assert(sizeof(u32) == 4, "Expected uint32 to be 4 bytes.");
+static_assert(sizeof(u64) == 8, "Expected uint64 to be 8 bytes.");
+
+typedef int b32;
+typedef bool b8;
+typedef u8 byte;
+
+void         PlatformAssert(const char * msg, const char * file, const char * functionName, int line);
 const char * PlatformFileDialogOpen(const char * path, const char * filter);
 const char * PlatformFileDialogSave(const char * path, const char * filter);
 
-struct StringView {
-    const char * data;
-    int          length;
-};
-
-struct SmallString {
-    char data[64];
-    int  length;
-
-    operator StringView() const {
-        return { data, length };
-    }
-};
-
-struct LargeString {
-    char data[256];
-    int  length;
-
-    operator StringView() const {
-        return { data, length };
-    }
-};
-
-// bool StringEquals(StringView * a, StringView * b);
-// bool StringStartsWith(StringView * str, StringView * substr);
-// bool StringEndsWith(StringView * str, StringView * substr);
-// bool StringContains(StringView * str, StringView * substr);
-
-// void StringCopy(StringView * dst, StringView * src);
-// void StringAppend(StringView * dst, StringView * src);
-// void StringAppend(StringView * dst, const char * src);
-// void StringAppend(StringView * dst, char c);
-// void StringAppend(StringView * dst, int i);
-// void StringAppend(StringView * dst, float f);
-
-// void StringFormat(StringView * dst, const char * fmt, ...);
+void        MemorySet(void * dest, u8 value, u64 size);
