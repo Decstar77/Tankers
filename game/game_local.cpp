@@ -17,6 +17,8 @@ void DoScreenMainMenu(GameLocal & gameLocal) {
     uiState.surfaceMouse = { GetMousePosition().x, GetMousePosition().y };
     if (UIDrawButtonCenter(GetScreenWidth() / 2, GetScreenHeight() / 2 - 100, "Single Player")) {
         MapCreate(gameLocal.map, true);
+        MapStart(gameLocal.map);
+        gameLocal.playerNumber = 1;
         gameLocal.screen = SCREEN_TYPE_GAME;
     }
     if (UIDrawButtonCenter(GetScreenWidth() / 2, GetScreenHeight() / 2, "Multiplayer")) {
@@ -34,8 +36,8 @@ void DoScreenMainMenu(GameLocal & gameLocal) {
         while (NetworkPoll(packet)) {
             if (packet.type == GAME_PACKET_TYPE_MAP_START) {
                 printf("Received map start packet.\n");
-                gameLocal.playerNumber = packet.mapStart.localPlayerNumber;
                 MapStart(gameLocal.map);
+                gameLocal.playerNumber = packet.mapStart.localPlayerNumber;
                 gameLocal.sync.Start();
 
                 gameLocal.screen = SCREEN_TYPE_GAME;
@@ -60,6 +62,19 @@ static void DrawGeneral(Entity & entity) {
     }
 }
 
+static void DrawTownCenter(Entity & entity) {
+    Rectangle r = { entity.townCenter.visPos.x, entity.townCenter.visPos.y, MAP_TILE_WIDTH * BUILDING_TOWN_CENTER_TILE_W_COUNT, MAP_TILE_HEIGHT * BUILDING_TOWN_CENTER_TILE_H_COUNT };
+    Color c = entity.playerNumber == 1 ? BLUE : RED;
+    DrawRectangleRec(r, c);
+    DrawRectangleLinesEx(r, 2, BLACK);
+    i32 cx = (i32)entity.townCenter.visPos.x + (MAP_TILE_WIDTH * BUILDING_TOWN_CENTER_TILE_W_COUNT) / 2;
+    i32 cy = (i32)entity.townCenter.visPos.y + (MAP_TILE_HEIGHT * BUILDING_TOWN_CENTER_TILE_H_COUNT) / 2;
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), "TC", 20, 1);
+    cx -= (i32)textSize.x / 2;
+    cy -= (i32)textSize.y / 2;
+    DrawText("TC", cx, cy, 20, BLACK);
+}
+
 void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, RenderTexture2D surface) {
     Map & map = gameLocal.map;
     Camera2D & cam = gameLocal.cam;
@@ -67,8 +82,10 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     if (map.isSinglePlayer) {
         gameLocal.turnAccumulator += GetFrameTime();
         if (gameLocal.turnAccumulator >= gameLocal.sync.turnRateMS) {
-            gameLocal.turnAccumulator -= gameLocal.sync.turnRateMS;
+            gameLocal.turnAccumulator = 0;
             static MapTurn dummyTurn = {};
+            dummyTurn.turnNumber = map.turnNumber;
+            gameLocal.mapTurn.turnNumber = map.turnNumber;
             MapDoTurn(map, gameLocal.mapTurn, dummyTurn);
             ZeroStruct(gameLocal.mapTurn);
             ZeroStruct(dummyTurn);
@@ -86,6 +103,8 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         gameLocal.turnAccumulator += GetFrameTime();
         if (gameLocal.turnAccumulator >= gameLocal.sync.turnRateMS) {
             if (gameLocal.sync.CanTurn()) {
+                gameLocal.turnAccumulator = 0;
+
                 gameLocal.mapTurn.checkSum = MapMakeTurnCheckSum(map);
                 gameLocal.mapTurn.turnNumber = map.turnNumber + gameLocal.sync.GetSlidingWindowWidth();
                 gameLocal.sync.AddTurn(gameLocal.playerNumber, gameLocal.mapTurn);
@@ -120,6 +139,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     surfaceMouse = Clamp(surfaceMouse, { 0, 0 }, { (float)surfaceWidth, (float)surfaceHeight });
 
     DoCameraPanning(cam);
+    DoCameraZooming(cam);
 
     Vector2 rayMouseWorld = GetScreenToWorld2D({ surfaceMouse.x, surfaceMouse.y }, cam);
     v2 mouseWorld = { rayMouseWorld.x, rayMouseWorld.y };
@@ -153,7 +173,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         endDrag = {};
         for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
             Entity * entity = &map.entities[i];
-            if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
+            if (entity->inUse && entity->playerNumber == gameLocal.playerNumber && entity->type == ENTITY_TYPE_GENERAL) {
                 Circle c = EntityGetSelectionBounds(entity);
                 if (CircleVsRect(c, selectionRect)) {
                     entity->selected = true;
@@ -171,6 +191,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
     }
 
+
     BeginTextureMode(surface);
     BeginMode2D(gameLocal.cam);
     ClearBackground(RAYWHITE);
@@ -178,9 +199,24 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
         Entity * entity = &map.entities[i];
         if (entity->inUse) {
-            DrawGeneral(*entity);
+            switch (entity->type) {
+            case ENTITY_TYPE_GENERAL:               DrawGeneral(*entity); break;
+            case ENTITY_TYPE_BUILDING_TOWN_CENTER:  DrawTownCenter(*entity); break;
+            default:
+                break;
+            }
         }
     }
+
+#if 0
+    for (i32 i = 0; i < MAX_MAP_TILES; i++) {
+        MapTile * tile = &map.tiles[i];
+        Rectangle r = { tile->visPos.x + 2, tile->visPos.y + 2, MAP_TILE_WIDTH - 2, MAP_TILE_HEIGHT - 2 };
+        Color c = tile->isWalkable ? GREEN : RED;
+        DrawRectangleRec(r, Fade(c, 0.7f));
+        DrawText(TextFormat("%d", tile->flatIndex), (i32)tile->visPos.x, (i32)tile->visPos.y, 10, BLACK);
+    }
+#endif
 
     if (dragging == true) {
         v2 topLeft = {};
@@ -299,10 +335,16 @@ void DoCameraPanning(Camera2D & cam) {
     if (IsKeyDown(KEY_D)) {
         cam.target.x += speed;
     }
+}
+
+void DoCameraZooming(Camera2D & cam) {
+    f32 speed = 0.05f;
     if (IsKeyDown(KEY_Q)) {
-        cam.zoom -= 0.1f;
+        cam.zoom -= speed;
     }
     if (IsKeyDown(KEY_E)) {
-        cam.zoom += 0.1f;
+        cam.zoom += speed;
     }
+    cam.zoom += ((float)GetMouseWheelMove() * speed);
+    cam.zoom = Clamp(cam.zoom, 0.5f, 2.0f);
 }

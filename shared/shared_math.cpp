@@ -360,6 +360,10 @@ v2fp V2fp(fp x, fp y) {
     return { x, y };
 }
 
+v2fp V2fp(f32 x, f32 y) {
+    return { Fp(x), Fp(y) };
+}
+
 v2fp V2fp(i32 x, i32 y) {
     return { Fp(x), Fp(y) };
 }

@@ -58,6 +58,7 @@ bool UIDrawButtonCenter(i32 centerX, i32 centerY, const char * text, Rectangle *
 bool UIDrawButtonTopLeft(i32 centerX, i32 centerY, const char * text, Rectangle * bb = nullptr);
 
 void DoCameraPanning(Camera2D & cam);
+void DoCameraZooming(Camera2D & cam);
 
 void DoScreenMainMenu(GameLocal & gameLocal);
 void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, RenderTexture2D surface);

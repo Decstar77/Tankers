@@ -21,7 +21,19 @@ struct Grunt {
 
 };
 
-#define MAX_GRUNTS 50
+struct EntityId {
+    i32 idx;
+    i32 gen;
+};
+
+enum EntityType {
+    ENTITY_TYPE_INVALID = 0,
+    ENTITY_TYPE_GENERAL,
+    ENTITY_TYPE_BUILDING_TOWN_CENTER,
+    ENTITY_TYPE_COUNT,
+};
+
+#define MAX_GRUNTS 6
 struct General {
     v2fp pos;
     v2fp target;
@@ -30,26 +42,42 @@ struct General {
     Grunt grunts[MAX_GRUNTS];
 };
 
-struct EntityId {
-    i32 idx;
-    i32 gen;
+constexpr i32 BUILDING_TOWN_CENTER_TILE_W_COUNT = 3;
+constexpr i32 BUILDING_TOWN_CENTER_TILE_H_COUNT = 3;
+
+struct BuildingTownHall {
+    v2fp pos;
+    v2 visPos;
+    i32 baseTileIndex;
 };
 
 struct Entity {
     bool inUse;
     EntityId id;
+    EntityType type;
     bool selected;
     i32 playerNumber;
     union {
         General general;
+        BuildingTownHall townCenter;
     };
 };
 
-struct MapTiles {
-
+struct MapTile {
+    v2fp    pos;
+    v2      visPos;
+    i32 flatIndex;
+    i32 xIndex;
+    i32 yIndex;
+    bool isWalkable;
 };
 
-#define MAX_MAP_ENTITIES 100
+constexpr i32 MAX_MAP_ENTITIES = 100;
+constexpr i32 MAX_MAP_TILE_W_COUNT = 100;
+constexpr i32 MAX_MAP_TILE_H_COUNT = 100;
+constexpr i32 MAX_MAP_TILES = MAX_MAP_TILE_W_COUNT * MAX_MAP_TILE_H_COUNT;
+constexpr i32 MAP_TILE_WIDTH = 25;
+constexpr i32 MAP_TILE_HEIGHT = 25;
 
 struct Map {
     MapSize size;
@@ -64,6 +92,8 @@ struct Map {
     EntityId    selection[MAX_MAP_ENTITIES];
 
     Entity      entities[MAX_MAP_ENTITIES];
+
+    FixedList<MapTile, MAX_MAP_TILES> tiles;
 };
 
 enum MapCommandType {
@@ -91,9 +121,15 @@ Circle EntityGetSelectionBounds(Entity * entity);
 void MapCreate(Map & map, bool singlePlayer);
 void MapStart(Map & map);
 
-Entity * MapSpawnEntity(Map & map, i32 playerNumber);
+Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber);
 Entity * MapSpawnGeneral(Map & map, i32 playerNumber);
 Entity * MapSpawnGeneral(Map & map, i32 playerNumber, v2fp pos);
+
+Entity * MapSpawnBuildingCenter(Map & map, i32 playerNumber, i32 baseTileIndex);
+
+i32     MapTileGetFlatIndex(i32 xIndex, i32 yIndex);
+v2fp    MapTileFlatIndexToWorldPos(Map & map, i32 flatIndex);
+i32     MapTileWorldPosToFlatIndex(Map & map, v2fp pos);
 
 void MapCreateCommand(Map & map, MapCommand & action, MapCommandType type);
 void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & action, v2fp target);

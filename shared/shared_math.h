@@ -143,6 +143,7 @@ struct v2fp {
 };
 
 v2fp V2fp(fp x, fp y);
+v2fp V2fp(f32 x, f32 y);
 v2fp V2fp(i32 x, i32 y);
 v2fp V2fp(v2 v);
 
