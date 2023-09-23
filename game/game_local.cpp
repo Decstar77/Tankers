@@ -180,7 +180,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
             selectionRect.min = Min(startDrag, endDrag);
             selectionRect.max = Max(startDrag, endDrag);
 
-            map.selectionCount = 0;
+            map.selection.Clear();
 
             startDrag = {};
             endDrag = {};
@@ -191,22 +191,23 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
                         Bounds c = EntityGetSelectionBounds(entity);
                         if (c.type == BOUNDS_TYPE_CIRCLE && CircleVsRect(c.circle, selectionRect)) {
                             entity->selected = true;
-                            map.selection[map.selectionCount] = entity->id;
-                            map.selectionCount++;
+                            map.selection.Add(entity->id);
                         }
                         else {
                             entity->selected = false;
                         }
-                    } else {
+                    }
+                    else {
                         entity->selected = false;
                     }
                 }
             }
         }
         else {
-            map.selectionCount = 0;
             startDrag = {};
             endDrag = {};
+
+            map.selection.Clear();
 
             for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
                 Entity * entity = &map.entities[i];
@@ -214,13 +215,11 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
                     Bounds b = EntityGetSelectionBounds(entity);
                     if (b.type == BOUNDS_TYPE_CIRCLE && CircleVsCircle(b.circle, { mouseWorld, 10 })) {
                         entity->selected = true;
-                        map.selection[map.selectionCount] = entity->id;
-                        map.selectionCount++;
+                        map.selection.Add(entity->id);
                     }
                     else if (b.type == BOUNDS_TYPE_RECT && IsPointInRect(mouseWorld, b.rect)) {
                         entity->selected = true;
-                        map.selection[map.selectionCount] = entity->id;
-                        map.selectionCount++;
+                        map.selection.Add(entity->id);
                     }
                     else {
                         entity->selected = false;

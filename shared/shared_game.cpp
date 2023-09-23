@@ -180,9 +180,9 @@ void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & cmd, v2fp target)
     MapCreateCommand(map, cmd, MAP_COMMAND_MOVE_UNITS);
     cmd.target = target;
 
-    Assert(map.selectionCount <= ArrayCount(cmd.entities));
-    cmd.entitiesCount = map.selectionCount;
-    for (int i = 0; i < map.selectionCount; i++) {
+    Assert(map.selection.GetCount() <= ArrayCount(cmd.entities));
+    cmd.entitiesCount = map.selection.GetCount();
+    for (int i = 0; i < map.selection.GetCount(); i++) {
         cmd.entities[i] = map.selection[i];
     }
 }

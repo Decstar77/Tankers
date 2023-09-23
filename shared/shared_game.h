@@ -88,11 +88,8 @@ struct Map {
     bool isSinglePlayer;
     i32 turnNumber;
 
-    i32         selectionCount;
-    EntityId    selection[MAX_MAP_ENTITIES];
-
-    Entity      entities[MAX_MAP_ENTITIES];
-
+    FixedList<EntityId, MAX_MAP_ENTITIES> selection;
+    FixedList<Entity, MAX_MAP_ENTITIES> entities;
     FixedList<MapTile, MAX_MAP_TILES> tiles;
 };
 
