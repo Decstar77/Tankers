@@ -28,6 +28,10 @@ inline f32 Clamp(f32 a, f32 min, f32 max) {
     return a < min ? min : (a > max ? max : a);
 }
 
+inline i32 Clamp(i32 a, i32 min, i32 max) {
+    return a < min ? min : (a > max ? max : a);
+}
+
 inline void Swap(f32 * a, f32 * b) {
     f32 temp = *a;
     *a = *b;

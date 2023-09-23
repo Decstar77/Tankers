@@ -14,7 +14,7 @@ void DoScreenMainMenu(GameLocal & gameLocal) {
     BeginDrawing();
     ClearBackground(Fade(BLUE, 0.5f));
 
-    uiState.surfaceMouse = { GetMousePosition().x, GetMousePosition().y };
+    UIStateReset();
     if (UIDrawButtonCenter(GetScreenWidth() / 2, GetScreenHeight() / 2 - 100, "Single Player")) {
         MapCreate(gameLocal.map, true);
         MapStart(gameLocal.map);
@@ -44,6 +44,8 @@ void DoScreenMainMenu(GameLocal & gameLocal) {
             }
         }
     }
+
+    UIStateDraw();
 
     EndDrawing();
 }
@@ -136,6 +138,15 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         }
     }
 
+    UIStateReset();
+    SmallString r1Text = StringFormat::Small("R1: %d", gameLocal.playerNumber == 1 ? map.player1Resource1Count : map.player2Resource1Count);
+    SmallString r2Text = StringFormat::Small("R2: %d", gameLocal.playerNumber == 1 ? map.player1Resource2Count : map.player2Resource2Count);
+    UIDrawButtonTopLeft(10, 10, r1Text.GetCStr());
+    UIDrawButtonTopLeft(10, 40, r2Text.GetCStr());
+    if (MapSelectionContainsType(map, ENTITY_TYPE_BUILDING_TOWN_CENTER)) {
+        UIDrawBlockButton(V2(GetScreenWidth() - 60, GetScreenHeight() - 60), V2(100, 100), GRAY, "Build\nGeneral");
+    }
+
     f32 scale = Min((f32)GetScreenWidth() / surfaceWidth, (f32)GetScreenHeight() / surfaceHeight);
 
     Vector2 mouse = GetMousePosition();
@@ -160,36 +171,65 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     static v2 endDrag = {};
     static bool dragging = false;
 
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        startDrag = mouseWorld;
-    }
+    if (uiState.elementHovered == false) {
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            startDrag = mouseWorld;
+        }
 
-    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && mouseMoved) {
-        dragging = true;
-    }
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && mouseMoved) {
+            dragging = true;
+        }
 
-    if (dragging == true) {
-        endDrag = mouseWorld;
-    }
-
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
         if (dragging == true) {
-            dragging = false;
+            endDrag = mouseWorld;
+        }
 
-            Rect selectionRect = {};
-            selectionRect.min = Min(startDrag, endDrag);
-            selectionRect.max = Max(startDrag, endDrag);
+        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+            if (dragging == true) {
+                dragging = false;
 
-            map.selection.Clear();
+                Rect selectionRect = {};
+                selectionRect.min = Min(startDrag, endDrag);
+                selectionRect.max = Max(startDrag, endDrag);
 
-            startDrag = {};
-            endDrag = {};
-            for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
-                Entity * entity = &map.entities[i];
-                if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
-                    if (entity->type == ENTITY_TYPE_GENERAL) {
-                        Bounds c = EntityGetSelectionBounds(entity);
-                        if (c.type == BOUNDS_TYPE_CIRCLE && CircleVsRect(c.circle, selectionRect)) {
+                map.selection.Clear();
+
+                startDrag = {};
+                endDrag = {};
+                for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+                    Entity * entity = &map.entities[i];
+                    if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
+                        if (entity->type == ENTITY_TYPE_GENERAL) {
+                            Bounds c = EntityGetSelectionBounds(entity);
+                            if (c.type == BOUNDS_TYPE_CIRCLE && CircleVsRect(c.circle, selectionRect)) {
+                                entity->selected = true;
+                                map.selection.Add(entity->id);
+                            }
+                            else {
+                                entity->selected = false;
+                            }
+                        }
+                        else {
+                            entity->selected = false;
+                        }
+                    }
+                }
+            }
+            else {
+                startDrag = {};
+                endDrag = {};
+
+                map.selection.Clear();
+
+                for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+                    Entity * entity = &map.entities[i];
+                    if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
+                        Bounds b = EntityGetSelectionBounds(entity);
+                        if (b.type == BOUNDS_TYPE_CIRCLE && CircleVsCircle(b.circle, { mouseWorld, 10 })) {
+                            entity->selected = true;
+                            map.selection.Add(entity->id);
+                        }
+                        else if (b.type == BOUNDS_TYPE_RECT && IsPointInRect(mouseWorld, b.rect)) {
                             entity->selected = true;
                             map.selection.Add(entity->id);
                         }
@@ -197,40 +237,13 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
                             entity->selected = false;
                         }
                     }
-                    else {
-                        entity->selected = false;
-                    }
                 }
             }
         }
-        else {
-            startDrag = {};
-            endDrag = {};
 
-            map.selection.Clear();
-
-            for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
-                Entity * entity = &map.entities[i];
-                if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
-                    Bounds b = EntityGetSelectionBounds(entity);
-                    if (b.type == BOUNDS_TYPE_CIRCLE && CircleVsCircle(b.circle, { mouseWorld, 10 })) {
-                        entity->selected = true;
-                        map.selection.Add(entity->id);
-                    }
-                    else if (b.type == BOUNDS_TYPE_RECT && IsPointInRect(mouseWorld, b.rect)) {
-                        entity->selected = true;
-                        map.selection.Add(entity->id);
-                    }
-                    else {
-                        entity->selected = false;
-                    }
-                }
-            }
+        if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
+            MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
         }
-    }
-
-    if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
-        MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
     }
 
     BeginTextureMode(surface);
@@ -293,7 +306,62 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     r2.height = (float)surfaceHeight * scale;
     DrawTexturePro(surface.texture, r1, r2, {}, 0.0f, WHITE);
 
+    UIStateDraw();
+
     EndDrawing();
+}
+
+void UIStateReset() {
+    uiState.surfaceMouse = { GetMousePosition().x, GetMousePosition().y };
+    uiState.elementHovered = false;
+    uiState.submissions.Clear();
+}
+
+void UIStateDraw() {
+    const i32 count = uiState.submissions.GetCount();
+    for (i32 i = 0; i < count; i++) {
+        UISubmission & submission = uiState.submissions[i];
+        switch (submission.type) {
+        case UI_SUBMISSION_TYPE_BUTTON: {
+            if (submission.isHovered) {
+                if (submission.isPressed) {
+                    DrawRectangleRec(submission.rect, submission.pressedColor);
+                }
+                else {
+                    DrawRectangleRec(submission.rect, submission.hoveredColor);
+                }
+            }
+            else {
+                DrawRectangleRec(submission.rect, submission.baseColor);
+            }
+
+            Vector2 textPos = { submission.rect.x + submission.rect.width / 2 - submission.textSize.x / 2,
+            submission.rect.y + submission.rect.height / 2 - submission.textSize.y / 2 };
+            DrawTextEx(GetFontDefault(), submission.text.GetCStr(), textPos, 20, 1, BLACK);
+
+        } break;
+        case UI_SUBMISSION_TYPE_BLOCK_BUTTON: {
+            if (submission.isHovered) {
+                if (submission.isPressed) {
+                    DrawRectangleRec(submission.rect, submission.pressedColor);
+                }
+                else {
+                    DrawRectangleRec(submission.rect, submission.hoveredColor);
+                }
+            }
+            else {
+                DrawRectangleRec(submission.rect, submission.baseColor);
+            }
+
+            Vector2 textPos = { submission.rect.x + submission.rect.width / 2 - submission.textSize.x / 2,
+            submission.rect.y + submission.rect.height / 2 - submission.textSize.y / 2 };
+            DrawTextEx(GetFontDefault(), submission.text.GetCStr(), textPos, 20, 1, BLACK);
+        } break;
+        default: {
+            Assert(0 && "Invalid submission type");
+        }
+        }
+    }
 }
 
 void UIColorsCreate() {
@@ -325,49 +393,65 @@ bool UIDrawButtonCenter(i32 centerX, i32 centerY, const char * text, Rectangle *
     Vector2 rectSize = { textSize.x + 20, textSize.y + 20 };
     Rectangle rect = { (float)centerX - rectSize.x / 2, (float)centerY - rectSize.y / 2, rectSize.x, rectSize.y };
 
-    DrawRectangleRec(rect, UIColorsGet(UI_COLOR_SLOT_BACKGROUND));
-
     if (bb != nullptr) {
         *bb = rect;
     }
 
-    Vector2 textPos = { rect.x + rect.width / 2 - textSize.x / 2, rect.y + rect.height / 2 - textSize.y / 2 };
-    DrawTextEx(GetFontDefault(), text, textPos, 20, 1, BLACK);
-
     Vector2 mousePos = { uiState.surfaceMouse.x, uiState.surfaceMouse.y };
-    if (CheckCollisionPointRec(mousePos, rect)) {
-        DrawRectangleLinesEx(rect, 2, RED);
-        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-            return true;
-        }
-    }
 
-    return false;
+    UISubmission submission = {};
+    submission.type = UI_SUBMISSION_TYPE_BUTTON;
+    submission.text = text;
+    submission.textSize = textSize;
+    submission.rect = rect;
+    submission.baseColor = UIColorsGet(UI_COLOR_SLOT_BACKGROUND);
+    submission.hoveredColor = submission.baseColor;
+    submission.hoveredColor.r = (u8)((f32)submission.hoveredColor.r * 1.2f);
+    submission.hoveredColor.g = (u8)((f32)submission.hoveredColor.g * 1.2f);
+    submission.hoveredColor.b = (u8)((f32)submission.hoveredColor.b * 1.2f);
+    submission.pressedColor = submission.baseColor;
+    submission.pressedColor.r = (u8)((f32)submission.pressedColor.r * 1.5f);
+    submission.pressedColor.g = (u8)((f32)submission.pressedColor.g * 1.5f);
+    submission.pressedColor.b = (u8)((f32)submission.pressedColor.b * 1.5f);
+    submission.isHovered = CheckCollisionPointRec(mousePos, rect);
+    submission.isPressed = submission.isHovered && IsMouseButtonReleased(MOUSE_LEFT_BUTTON);
+
+    uiState.submissions.Add(submission);
+    uiState.elementHovered = uiState.elementHovered || submission.isHovered;
+
+    return submission.isPressed;
 }
 
-bool UIDrawButtonTopLeft(i32 centerX, i32 centerY, const char * text, Rectangle * bb) {
+bool UIDrawButtonTopLeft(i32 topLeft, i32 topRight, const char * text, Rectangle * bb) {
     Vector2 textSize = MeasureTextEx(GetFontDefault(), text, 20, 1);
     Vector2 rectSize = { textSize.x + 20, textSize.y + 20 };
-    Rectangle rect = { (float)centerX, (float)centerY, rectSize.x, rectSize.y };
+    i32 cx = (i32)(topLeft + rectSize.x / 2);
+    i32 cy = (i32)(topRight + rectSize.y / 2);
+    return UIDrawButtonCenter(cx, cy, text, bb);
+}
 
-    DrawRectangleRec(rect, UIColorsGet(UI_COLOR_SLOT_BACKGROUND));
+bool UIDrawBlockButton(v2 center, v2 dims, Color c, const char * text) {
+    UISubmission submission = {};
+    submission.type = UI_SUBMISSION_TYPE_BLOCK_BUTTON;
+    submission.text = text;
+    submission.textSize = MeasureTextEx(GetFontDefault(), text, 20, 1);
+    submission.rect = { center.x - dims.x / 2, center.y - dims.y / 2, dims.x, dims.y };
+    submission.baseColor = c;
+    submission.hoveredColor = c;
+    submission.hoveredColor.r = (u8)((f32)submission.hoveredColor.r * 1.2f);
+    submission.hoveredColor.g = (u8)((f32)submission.hoveredColor.g * 1.2f);
+    submission.hoveredColor.b = (u8)((f32)submission.hoveredColor.b * 1.2f);
+    submission.pressedColor = c;
+    submission.pressedColor.r = (u8)((f32)submission.pressedColor.r * 1.5f);
+    submission.pressedColor.g = (u8)((f32)submission.pressedColor.g * 1.5f);
+    submission.pressedColor.b = (u8)((f32)submission.pressedColor.b * 1.5f);
+    submission.isHovered = CheckCollisionPointRec({ uiState.surfaceMouse.x, uiState.surfaceMouse.y }, submission.rect);
+    submission.isPressed = submission.isHovered && IsMouseButtonReleased(MOUSE_LEFT_BUTTON);
 
-    if (bb != nullptr) {
-        *bb = rect;
-    }
+    uiState.submissions.Add(submission);
+    uiState.elementHovered = uiState.elementHovered || submission.isHovered;
 
-    Vector2 textPos = { rect.x + rect.width / 2 - textSize.x / 2, rect.y + rect.height / 2 - textSize.y / 2 };
-    DrawTextEx(GetFontDefault(), text, textPos, 20, 1, BLACK);
-
-    Vector2 mousePos = { uiState.surfaceMouse.x, uiState.surfaceMouse.y };
-    if (CheckCollisionPointRec(mousePos, rect)) {
-        DrawRectangleLinesEx(rect, 2, RED);
-        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-            return true;
-        }
-    }
-
-    return false;
+    return submission.isPressed;
 }
 
 void DoCameraPanning(Camera2D & cam) {

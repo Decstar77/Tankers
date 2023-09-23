@@ -85,12 +85,18 @@ struct Map {
     i32 width;
     i32 height;
 
+    i32 player1Resource1Count;
+    i32 player1Resource2Count;
+
+    i32 player2Resource1Count;
+    i32 player2Resource2Count;
+
     bool isSinglePlayer;
     i32 turnNumber;
 
-    FixedList<EntityId, MAX_MAP_ENTITIES> selection;
-    FixedList<Entity, MAX_MAP_ENTITIES> entities;
-    FixedList<MapTile, MAX_MAP_TILES> tiles;
+    FixedList<EntityId, MAX_MAP_ENTITIES>   selection;
+    FixedList<Entity, MAX_MAP_ENTITIES>   entities;
+    FixedList<MapTile, MAX_MAP_TILES>      tiles;
 };
 
 enum MapCommandType {
@@ -117,6 +123,10 @@ Bounds EntityGetSelectionBounds(Entity * entity);
 
 void MapCreate(Map & map, bool singlePlayer);
 void MapStart(Map & map);
+
+bool MapSelectionContainsType(Map & map, EntityType type);
+
+Entity * MapLookUpEntity(Map & map, EntityId id);
 
 Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber);
 Entity * MapSpawnGeneral(Map & map, i32 playerNumber);

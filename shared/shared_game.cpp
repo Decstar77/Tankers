@@ -41,6 +41,31 @@ void MapStart(Map & map) {
     map.turnNumber = 1;
 }
 
+bool MapSelectionContainsType(Map & map, EntityType type) {
+    const i32 count = map.selection.GetCount();
+    for (i32 i = 0; i < count; i++) {
+        Entity * entity = &map.entities[map.selection[i].idx];
+        if (entity->type == type) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+Entity * MapLookUpEntity(Map & map, EntityId id) {
+    if (id.idx < 0 || id.idx >= MAX_MAP_ENTITIES) {
+        return nullptr;
+    }
+
+    Entity * entity = &map.entities[id.idx];
+    if (entity->inUse && entity->id.gen == id.gen) {
+        return entity;
+    }
+
+    return nullptr;
+}
+
 Bounds EntityGetSelectionBounds(Entity * entity) {
     switch (entity->type) {
     case ENTITY_TYPE_GENERAL: {
@@ -180,10 +205,15 @@ void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & cmd, v2fp target)
     MapCreateCommand(map, cmd, MAP_COMMAND_MOVE_UNITS);
     cmd.target = target;
 
-    Assert(map.selection.GetCount() <= ArrayCount(cmd.entities));
-    cmd.entitiesCount = map.selection.GetCount();
-    for (int i = 0; i < map.selection.GetCount(); i++) {
-        cmd.entities[i] = map.selection[i];
+    const i32 count = map.selection.GetCount();
+    Assert(count <= ArrayCount(cmd.entities));
+
+    for (i32 i = 0; i < count; i++) {
+        Entity * entity = MapLookUpEntity(map, map.selection[i]);
+        if (entity && entity->type == ENTITY_TYPE_GENERAL) {
+            cmd.entities[cmd.entitiesCount] = map.selection[i];
+            cmd.entitiesCount++;;
+        }
     }
 }
 
