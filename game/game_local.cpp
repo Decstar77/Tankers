@@ -63,6 +63,17 @@ static void DrawBounds(Bounds bounds) {
 }
 
 static void DrawGeneral(Entity & entity) {
+    const i32 gruntCount = entity.general.grunts.GetCount();
+    for (i32 i = 0; i < gruntCount; i++) {
+        Grunt & grunt = entity.general.grunts[i];
+        Vector2 pos = { grunt.visPos.x, grunt.visPos.y };
+        Color c = entity.playerNumber == 1 ? SKYBLUE : SKYRED;
+        if (entity.selected) {
+            DrawCircleV(pos, 8, GREEN);
+        }
+        DrawCircleV(pos, 6, c);
+    }
+
     Vector2 pos = { entity.general.visPos.x, entity.general.visPos.y };
     if (entity.selected) {
         DrawCircleV(pos, 10, GREEN);
@@ -269,7 +280,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         Color c = tile->isWalkable ? GREEN : RED;
         DrawRectangleRec(r, Fade(c, 0.7f));
         DrawText(TextFormat("%d", tile->flatIndex), (i32)tile->visPos.x, (i32)tile->visPos.y, 10, BLACK);
-}
+    }
 #endif
 #if 0
     for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
@@ -309,7 +320,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     UIStateDraw();
 
     EndDrawing();
-}
+    }
 
 void UIStateReset() {
     uiState.surfaceMouse = { GetMousePosition().x, GetMousePosition().y };

@@ -110,22 +110,25 @@ Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber) {
     return nullptr;
 }
 
-Entity * MapSpawnGeneral(Map & map, i32 playerNumber) {
-    Entity * entity = MapSpawnEntity(map, ENTITY_TYPE_GENERAL, playerNumber);
-    if (entity) {
-        entity->general.pos = { 0, 0 };
-        entity->general.gruntCount = 0;
-    }
-    return entity;
-}
-
 Entity * MapSpawnGeneral(Map & map, i32 playerNumber, v2fp pos) {
     Entity * entity = MapSpawnEntity(map, ENTITY_TYPE_GENERAL, playerNumber);
     if (entity) {
         entity->general.pos = pos;
         entity->general.target = pos;
         entity->general.visPos = V2(pos);
-        entity->general.gruntCount = 0;
+
+        entity->general.equipment = GRUNT_EQUIPMENT_NONE;
+        // Spawn the grunts in a circle around the general
+        for (i32 i = 0; i < MAX_GRUNTS; i++) {
+
+            fp angle = Fp(i) / Fp(MAX_GRUNTS) * Fp(2) * FP_PI;
+            v2fp offset = V2fp(Cos(angle), Sin(angle)) * Fp(25.0f);
+
+            Grunt grunt = {};
+            grunt.pos = pos + offset;
+            grunt.visPos = V2(grunt.pos);
+            entity->general.grunts.Add(grunt);
+        }
     }
     return entity;
 }
@@ -246,9 +249,14 @@ i64 MapMakeTurnCheckSum(Map & map) {
             checkSum += I64(entity->general.pos.y);
             checkSum += I64(entity->general.target.x);
             checkSum += I64(entity->general.target.y);
-            checkSum += entity->general.gruntCount;
+            checkSum += entity->general.grunts.GetCount();
         }
     }
+
+    checkSum += map.player1Resource1Count;
+    checkSum += map.player1Resource2Count;
+    checkSum += map.player2Resource1Count;
+    checkSum += map.player2Resource2Count;
 
     return checkSum;
 }
@@ -271,10 +279,27 @@ void MapDoTurn(Map & map, MapTurn & player1Turn, MapTurn & player2Turn) {
     for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
         Entity * entity = &map.entities[i];
         if (entity->inUse) {
-            fp speed = Fp(0.1f);
-            v2fp dir = entity->general.target - entity->general.pos;
-            entity->general.pos = entity->general.pos + dir * speed;
-            entity->general.visPos = Lerp(entity->general.visPos, V2(entity->general.pos), 0.1f);
+            switch (entity->type) {
+            case ENTITY_TYPE_GENERAL: {
+                fp speed = Fp(0.1f);
+                v2fp dir = entity->general.target - entity->general.pos;
+                entity->general.pos = entity->general.pos + dir * speed;
+                entity->general.visPos = Lerp(entity->general.visPos, V2(entity->general.pos), 0.1f);
+                const i32 gruntCount = entity->general.grunts.GetCount();
+                for (i32 i = 0; i < gruntCount; i++) {
+                    Grunt * grunt = &entity->general.grunts[i];
+                    grunt->pos = grunt->pos + dir * speed;
+                    grunt->visPos = Lerp(grunt->visPos, V2(grunt->pos), 0.1f);
+                }
+            } break;
+            case ENTITY_TYPE_BUILDING_TOWN_CENTER: {
+
+            } break;
+            default: {
+                Assert(false && "Invalid entity type, you probably forget to add it here");
+            } break;
+            }
+
         }
     }
 

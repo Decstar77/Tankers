@@ -316,6 +316,48 @@ i64 I64(fp f) {
     return (i64)FpToInt(f);
 }
 
+fp Mod(fp a, fp b) {
+    fp v = {};
+    v.value = a.value % b.value;
+    return v;
+}
+
+
+fp Sin(fp x) {
+    // This sine uses a fifth-order curve-fitting approximation originally
+    // described by Jasper on coranac.com which has a worst-case
+    // relative error of 0.07% (over [-pi:pi]).
+
+    // Turn x from [0..2*PI] domain into [0..4] domain
+    x = Mod(x, FP_PI2);
+    x = x / FP_HALF_PI;
+
+    // Take x modulo one rotation, so [-4..+4].
+    if (x < Fp(0)) {
+        x = x + Fp(4);
+    }
+
+    int sign = +1;
+    if (x > Fp(2)) {
+        // Reduce domain to [0..2].
+        sign = -1;
+        x = x - Fp(2);
+    }
+
+    if (x > Fp(1)) {
+        // Reduce domain to [0..1].
+        x = Fp(2) - x;
+    }
+
+    const fp x2 = x * x;
+
+    return Fp(sign) * x * (FP_PI - x2 * (FP_PI2 - Fp(5) - x2 * (FP_PI - Fp(3)))) / Fp(2);
+}
+
+fp Cos(fp v) {
+    return Sin(v + FP_HALF_PI);
+}
+
 fp operator+(fp a, fp b) {
     fp p = {};
     p.value = a.value + b.value;

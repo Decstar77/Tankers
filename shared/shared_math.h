@@ -136,6 +136,10 @@ f32 FpToFloat(fp a);
 i32 FpToInt(fp a);
 i64 I64(fp f);
 
+fp   Mod(fp a, fp b);
+fp   Sin(fp v);
+fp   Cos(fp v);
+
 fp operator+(fp a, fp b);
 fp operator-(fp a, fp b);
 fp operator*(fp a, fp b);

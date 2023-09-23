@@ -17,8 +17,17 @@ enum MapVersion {
     MAP_VERSION_COUNT,
 };
 
-struct Grunt {
+enum GruntEquipment {
+    GRUNT_EQUIPMENT_INVALID = 0,
+    GRUNT_EQUIPMENT_NONE,
+    GRUNT_EQUIPMENT_PICKAXE,
+    GRUNT_EQUIPMENT_GUN,
+    GRUNT_EQUIPMENT_COUNT,
+};
 
+struct Grunt {
+    v2fp pos;
+    v2 visPos;
 };
 
 struct EntityId {
@@ -38,8 +47,8 @@ struct General {
     v2fp pos;
     v2fp target;
     v2 visPos;
-    i32 gruntCount;
-    Grunt grunts[MAX_GRUNTS];
+    GruntEquipment equipment;
+    FixedList<Grunt, MAX_GRUNTS> grunts;
 };
 
 constexpr i32 BUILDING_TOWN_CENTER_TILE_W_COUNT = 3;
@@ -129,7 +138,6 @@ bool MapSelectionContainsType(Map & map, EntityType type);
 Entity * MapLookUpEntity(Map & map, EntityId id);
 
 Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber);
-Entity * MapSpawnGeneral(Map & map, i32 playerNumber);
 Entity * MapSpawnGeneral(Map & map, i32 playerNumber, v2fp pos);
 
 Entity * MapSpawnBuildingCenter(Map & map, i32 playerNumber, i32 baseTileIndex);
