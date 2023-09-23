@@ -116,7 +116,7 @@ struct MapTurn {
     MapCommand cmds[5];
 };
 
-Circle EntityGetSelectionBounds(Entity * entity);
+Bounds EntityGetSelectionBounds(Entity * entity);
 
 void MapCreate(Map & map, bool singlePlayer);
 void MapStart(Map & map);

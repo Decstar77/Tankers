@@ -41,11 +41,30 @@ void MapStart(Map & map) {
     map.turnNumber = 1;
 }
 
-Circle EntityGetSelectionBounds(Entity * entity) {
-    Circle result = {};
-    result.pos = V2(entity->general.pos);
-    result.radius = 7.0f;
-    return result;
+Bounds EntityGetSelectionBounds(Entity * entity) {
+    switch (entity->type) {
+    case ENTITY_TYPE_GENERAL: {
+        Bounds result = {};
+        result.type = BOUNDS_TYPE_CIRCLE;
+        result.circle.pos = entity->general.visPos;
+        result.circle.radius = 7.0f;
+        return result;
+    } break;
+    case ENTITY_TYPE_BUILDING_TOWN_CENTER: {
+        v2 dims = V2(MAP_TILE_WIDTH, MAP_TILE_HEIGHT) * V2(BUILDING_TOWN_CENTER_TILE_W_COUNT, BUILDING_TOWN_CENTER_TILE_H_COUNT);
+        Bounds result = {};
+        result.type = BOUNDS_TYPE_RECT;
+        result.rect.min = entity->townCenter.visPos;
+        result.rect.max = entity->townCenter.visPos + dims;
+        return result;
+    } break;
+    default: {
+        Assert(false && "Invalid entity type, you probably forget to add it here");
+        return {};
+    } break;
+    };
+
+    return {};
 }
 
 Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber) {

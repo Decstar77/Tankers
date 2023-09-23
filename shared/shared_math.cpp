@@ -3,6 +3,20 @@
 #include <math.h>
 #include <cmath>
 
+v2 V2(f32 x, f32 y) {
+    v2 v = {};
+    v.x = x;
+    v.y = y;
+    return v;
+}
+
+v2 V2(i32 x, i32 y) {
+    v2 v = {};
+    v.x = (f32)x;
+    v.y = (f32)y;
+    return v;
+}
+
 v2 operator+(v2 a, v2 b) {
     return { a.x + b.x, a.y + b.y };
 }
@@ -13,6 +27,10 @@ v2 operator-(v2 a, v2 b) {
 
 v2 operator*(v2 a, f32 b) {
     return { a.x * b, a.y * b };
+}
+
+v2 operator*(v2 a, v2 b) {
+    return { a.x * b.x, a.y * b.y };
 }
 
 v2 operator/(v2 a, f32 b) {
@@ -72,6 +90,16 @@ bool RoughlyEqual(v2 a, v2 b, f32 epsilon) {
 
 bool RoughlyZero(v2 a, f32 epsilon) {
     return fabsf(a.x) < epsilon && fabsf(a.y) < epsilon;
+}
+
+bool IsPointInCircle(v2 point, Circle circle) {
+    v2 diff = point - circle.pos;
+    f32 distSq = Dot(diff, diff);
+    return distSq < circle.radius * circle.radius;
+}
+
+bool IsPointInRect(v2 point, Rect rect) {
+    return point.x >= rect.min.x && point.x <= rect.max.x && point.y >= rect.min.y && point.y <= rect.max.y;
 }
 
 v2 ClosestPointOnCircle(v2 point, Circle circle) {

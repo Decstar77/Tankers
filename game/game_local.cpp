@@ -48,6 +48,18 @@ void DoScreenMainMenu(GameLocal & gameLocal) {
     EndDrawing();
 }
 
+static void DrawBounds(Bounds bounds) {
+    switch (bounds.type) {
+    case BOUNDS_TYPE_CIRCLE: {
+        DrawCircleV({ bounds.circle.pos.x, bounds.circle.pos.y }, bounds.circle.radius, RED);
+    } break;
+    case BOUNDS_TYPE_RECT: {
+        Rectangle r = { bounds.rect.min.x, bounds.rect.min.y, bounds.rect.max.x - bounds.rect.min.x, bounds.rect.max.y - bounds.rect.min.y };
+        DrawRectangleLinesEx(r, 2, RED);
+    } break;
+    }
+}
+
 static void DrawGeneral(Entity & entity) {
     Vector2 pos = { entity.general.visPos.x, entity.general.visPos.y };
     if (entity.selected) {
@@ -66,7 +78,7 @@ static void DrawTownCenter(Entity & entity) {
     Rectangle r = { entity.townCenter.visPos.x, entity.townCenter.visPos.y, MAP_TILE_WIDTH * BUILDING_TOWN_CENTER_TILE_W_COUNT, MAP_TILE_HEIGHT * BUILDING_TOWN_CENTER_TILE_H_COUNT };
     Color c = entity.playerNumber == 1 ? BLUE : RED;
     DrawRectangleRec(r, c);
-    DrawRectangleLinesEx(r, 2, BLACK);
+    DrawRectangleLinesEx(r, 2, entity.selected ? GREEN : BLACK);
     i32 cx = (i32)entity.townCenter.visPos.x + (MAP_TILE_WIDTH * BUILDING_TOWN_CENTER_TILE_W_COUNT) / 2;
     i32 cy = (i32)entity.townCenter.visPos.y + (MAP_TILE_HEIGHT * BUILDING_TOWN_CENTER_TILE_H_COUNT) / 2;
     Vector2 textSize = MeasureTextEx(GetFontDefault(), "TC", 20, 1);
@@ -160,28 +172,59 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         endDrag = mouseWorld;
     }
 
-    if (dragging == true && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-        dragging = false;
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+        if (dragging == true) {
+            dragging = false;
 
-        Rect selectionRect = {};
-        selectionRect.min = Min(startDrag, endDrag);
-        selectionRect.max = Max(startDrag, endDrag);
+            Rect selectionRect = {};
+            selectionRect.min = Min(startDrag, endDrag);
+            selectionRect.max = Max(startDrag, endDrag);
 
-        map.selectionCount = 0;
+            map.selectionCount = 0;
 
-        startDrag = {};
-        endDrag = {};
-        for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
-            Entity * entity = &map.entities[i];
-            if (entity->inUse && entity->playerNumber == gameLocal.playerNumber && entity->type == ENTITY_TYPE_GENERAL) {
-                Circle c = EntityGetSelectionBounds(entity);
-                if (CircleVsRect(c, selectionRect)) {
-                    entity->selected = true;
-                    map.selection[map.selectionCount] = entity->id;
-                    map.selectionCount++;
+            startDrag = {};
+            endDrag = {};
+            for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+                Entity * entity = &map.entities[i];
+                if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
+                    if (entity->type == ENTITY_TYPE_GENERAL) {
+                        Bounds c = EntityGetSelectionBounds(entity);
+                        if (c.type == BOUNDS_TYPE_CIRCLE && CircleVsRect(c.circle, selectionRect)) {
+                            entity->selected = true;
+                            map.selection[map.selectionCount] = entity->id;
+                            map.selectionCount++;
+                        }
+                        else {
+                            entity->selected = false;
+                        }
+                    } else {
+                        entity->selected = false;
+                    }
                 }
-                else {
-                    entity->selected = false;
+            }
+        }
+        else {
+            map.selectionCount = 0;
+            startDrag = {};
+            endDrag = {};
+
+            for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+                Entity * entity = &map.entities[i];
+                if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
+                    Bounds b = EntityGetSelectionBounds(entity);
+                    if (b.type == BOUNDS_TYPE_CIRCLE && CircleVsCircle(b.circle, { mouseWorld, 10 })) {
+                        entity->selected = true;
+                        map.selection[map.selectionCount] = entity->id;
+                        map.selectionCount++;
+                    }
+                    else if (b.type == BOUNDS_TYPE_RECT && IsPointInRect(mouseWorld, b.rect)) {
+                        entity->selected = true;
+                        map.selection[map.selectionCount] = entity->id;
+                        map.selectionCount++;
+                    }
+                    else {
+                        entity->selected = false;
+                    }
                 }
             }
         }
@@ -190,7 +233,6 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
         MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
     }
-
 
     BeginTextureMode(surface);
     BeginMode2D(gameLocal.cam);
@@ -215,9 +257,17 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         Color c = tile->isWalkable ? GREEN : RED;
         DrawRectangleRec(r, Fade(c, 0.7f));
         DrawText(TextFormat("%d", tile->flatIndex), (i32)tile->visPos.x, (i32)tile->visPos.y, 10, BLACK);
+}
+#endif
+#if 0
+    for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+        Entity * entity = &map.entities[i];
+        if (entity->inUse) {
+            Bounds b = EntityGetSelectionBounds(entity);
+            DrawBounds(b);
+        }
     }
 #endif
-
     if (dragging == true) {
         v2 topLeft = {};
         topLeft.x = Min(startDrag.x, endDrag.x);

@@ -54,10 +54,14 @@ struct v2 {
     }
 };
 
+v2 V2(f32 x, f32 y);
+v2 V2(i32 x, i32 y);
+
 // Operators
 v2 operator+(v2 a, v2 b);
 v2 operator-(v2 a, v2 b);
 v2 operator*(v2 a, f32 b);
+v2 operator*(v2 a, v2 b);
 v2 operator/(v2 a, f32 b);
 v2 operator*(f32 a, v2 b);
 v2 operator/(f32 a, v2 b);
@@ -83,11 +87,27 @@ struct Rect {
     v2 max;
 };
 
+enum BoundsType {
+    BOUNDS_TYPE_INVALID = 0,
+    BOUNDS_TYPE_CIRCLE,
+    BOUNDS_TYPE_RECT,
+};
+
+struct Bounds {
+    BoundsType type;
+    union {
+        Circle  circle;
+        Rect    rect;
+    };
+};
+
 struct CollisionManifold {
     v2 normal;
     f32 penetration;
 };
 
+bool    IsPointInCircle(v2 point, Circle circle);
+bool    IsPointInRect(v2 point, Rect rect);
 v2      ClosestPointOnCircle(v2 point, Circle circle);
 v2      ClosestPointOnRect(v2 point, Rect rect);
 bool    CircleVsCircle(Circle c1, Circle c2, CollisionManifold * manifold = nullptr);
