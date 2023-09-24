@@ -182,6 +182,17 @@ bool IsPointInBounds(v2 point, Bounds bounds) {
     }
 }
 
+v2 ClosestPointOnBounds(v2 point, Bounds bounds) {
+    switch (bounds.type) {
+    case BOUNDS_TYPE_CIRCLE:
+        return ClosestPointOnCircle(point, bounds.circle);
+    case BOUNDS_TYPE_RECT:
+        return ClosestPointOnRect(point, bounds.rect);
+    default:
+        return point;
+    }
+}
+
 #include <stdio.h>
 bool SweepCircleVsCircle(Circle c1, v2 c1_vel, Circle c2, v2 c2_vel, SweepResult * result) {
     // Relative velocity of circle1 with respect to circle2

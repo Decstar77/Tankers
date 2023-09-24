@@ -266,8 +266,7 @@ void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & cmd, v2fp target)
     for (i32 i = 0; i < count; i++) {
         Entity * entity = MapLookUpEntityFromId(map, map.selection[i]);
         if (entity && entity->type == ENTITY_TYPE_GENERAL) {
-            cmd.entities[cmd.entitiesCount] = map.selection[i];
-            cmd.entitiesCount++;
+            cmd.entities.Add(entity->id);
         }
     }
 }
@@ -275,7 +274,7 @@ void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & cmd, v2fp target)
 void MapApplyCommand(Map & map, const MapCommand & cmd) {
     switch (cmd.type) {
     case MAP_COMMAND_MOVE_UNITS: {
-        for (int i = 0; i < cmd.entitiesCount; i++) {
+        for (int i = 0; i < cmd.entities.GetCount(); i++) {
             EntityId id = cmd.entities[i];
             Entity * entity = &map.entities[id.idx];
             if (entity->inUse) {
@@ -320,11 +319,13 @@ void MapDoTurn(Map & map, MapTurn & player1Turn, MapTurn & player2Turn) {
     Assert(map.turnNumber == player2Turn.turnNumber);
     Assert(player1Turn.checkSum == player2Turn.checkSum);
 
-    for (i32 i = 0; i < player1Turn.commandCount; i++) {
+    const i32 player1CommandCount= player1Turn.cmds.GetCount();
+    for (i32 i = 0; i < player1CommandCount; i++) {
         MapApplyCommand(map, player1Turn.cmds[i]);
     }
 
-    for (i32 i = 0; i < player2Turn.commandCount; i++) {
+    const i32 player2CommandCount = player2Turn.cmds.GetCount();
+    for (i32 i = 0; i < player2CommandCount; i++) {
         MapApplyCommand(map, player2Turn.cmds[i]);
     }
 

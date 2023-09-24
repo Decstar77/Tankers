@@ -38,7 +38,7 @@ struct EntityId {
 enum EntityType {
     ENTITY_TYPE_INVALID = 0,
     ENTITY_TYPE_GENERAL,
-    
+
     ENTITY_TYPE_RESOURCE_NODE_BEGIN, // Place new resource node entities between RESOURCE_NODE_BEGIN and RESOURCE_NODE_END
     ENTITY_TYPE_RESOURCE_NODE_R1,
     ENTITY_TYPE_RESOURCE_NODE_R2,
@@ -134,18 +134,16 @@ enum MapCommandType {
     MAP_COMMAND_COUNT,
 };
 
-struct MapCommand {
+struct MapCommand { // TODO: Make sure this is heap allocated or something because it's going to be quite big I think
     MapCommandType   type;
-    i32             entitiesCount;
-    EntityId        entities[5];
+    FixedList<EntityId, 5> entities;
     v2fp            target;
 };
 
 struct MapTurn {
     i64 checkSum;
     i32 turnNumber;
-    i32 commandCount;
-    MapCommand cmds[5];
+    FixedList<MapCommand, 5> cmds;
 };
 
 Bounds EntityGetSelectionBounds(Entity * entity);

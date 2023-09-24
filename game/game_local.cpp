@@ -290,12 +290,28 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
             Entity * entity = GetEntityUnderMouse(map, mouseWorld);
             if (entity == nullptr) {
-                MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
+                MapCommand & cmd = gameLocal.mapTurn.cmds.AddEmpty();
+                MapCreateCommandMoveSelectedUnits(map, cmd, V2fp(mouseWorld));
             }
             else {
                 if (MapSelectionContainsType(map, ENTITY_TYPE_GENERAL) && EntityIsResourceNode(entity)) {
-                    
-                    printf("General is going to collect resources.\n");
+                    MapCommand & cmd = gameLocal.mapTurn.cmds.AddEmpty();
+                    MapCreateCommand(map, cmd, MAP_COMMAND_MOVE_UNITS);
+                    Bounds bounds = EntityGetSelectionBounds(entity);
+                    v2 tAvg = {};
+                    for (i32 i = 0; i < map.selection.GetCount(); i++) {
+                        Entity * selectedEntity = MapLookUpEntityFromId(map, map.selection[i]);
+                        if (selectedEntity && selectedEntity->type == ENTITY_TYPE_GENERAL) {
+                            v2 cp = ClosestPointOnBounds(selectedEntity->general.visPos, bounds);
+                            v2 dir = Normalize(selectedEntity->general.visPos - cp);
+                            v2 t = cp + dir * 30.0f;
+                            tAvg = tAvg + t;
+                            cmd.entities.Add(selectedEntity->id);
+                        }
+                    }
+
+                    tAvg = tAvg / (f32)cmd.entities.GetCount();
+                    cmd.target = V2fp(tAvg);
                 }
             }
         }

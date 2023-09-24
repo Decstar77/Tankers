@@ -118,6 +118,7 @@ bool    CircleVsCircle(Circle c1, Circle c2, CollisionManifold * manifold = null
 bool    CircleVsRect(Circle c, Rect r, CollisionManifold * manifold = nullptr);
 
 bool    IsPointInBounds(v2 point, Bounds bounds);
+v2      ClosestPointOnBounds(v2 point, Bounds bounds);
 
 struct SweepResult {
     f32 t;
