@@ -100,6 +100,45 @@ static void DrawTownCenter(Entity & entity) {
     DrawText("TC", cx, cy, 20, BLACK);
 }
 
+static void DrawResource1(Entity & entity) {
+    Rectangle r = { entity.resourceNode.visPos.x, entity.resourceNode.visPos.y, MAP_TILE_WIDTH * RESOURCE_NODE_TILE_W_COUNT, MAP_TILE_HEIGHT * RESOURCE_NODE_TILE_H_COUNT };
+    Color c = GREEN;
+    DrawRectangleRec(r, c);
+    DrawRectangleLinesEx(r, 2, entity.selected ? GREEN : BLACK);
+    i32 cx = (i32)entity.resourceNode.visPos.x + (MAP_TILE_WIDTH * RESOURCE_NODE_TILE_W_COUNT) / 2;
+    i32 cy = (i32)entity.resourceNode.visPos.y + (MAP_TILE_HEIGHT * RESOURCE_NODE_TILE_H_COUNT) / 2;
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), "R1", 20, 1);
+    cx -= (i32)textSize.x / 2;
+    cy -= (i32)textSize.y / 2;
+    DrawText("R1", cx, cy, 20, BLACK);
+}
+
+static void DrawResource2(Entity & entity) {
+    Rectangle r = { entity.resourceNode.visPos.x, entity.resourceNode.visPos.y, MAP_TILE_WIDTH * RESOURCE_NODE_TILE_W_COUNT, MAP_TILE_HEIGHT * RESOURCE_NODE_TILE_H_COUNT };
+    Color c = DARKGREEN;
+    DrawRectangleRec(r, c);
+    DrawRectangleLinesEx(r, 2, entity.selected ? GREEN : BLACK);
+    i32 cx = (i32)entity.resourceNode.visPos.x + (MAP_TILE_WIDTH * RESOURCE_NODE_TILE_W_COUNT) / 2;
+    i32 cy = (i32)entity.resourceNode.visPos.y + (MAP_TILE_HEIGHT * RESOURCE_NODE_TILE_H_COUNT) / 2;
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), "R2", 20, 1);
+    cx -= (i32)textSize.x / 2;
+    cy -= (i32)textSize.y / 2;
+    DrawText("R2", cx, cy, 20, BLACK);
+}
+
+Entity * GetEntityUnderMouse(Map & map, v2 worldMouse) {
+    for (i32 i = 0; i < MAX_MAP_ENTITIES; i++) {
+        Entity * entity = &map.entities[i];
+        if (entity->inUse) {
+            Bounds b = EntityGetSelectionBounds(entity);
+            if (IsPointInBounds(worldMouse, b)) {
+                return entity;
+            }
+        }
+    }
+    return nullptr;
+}
+
 void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, RenderTexture2D surface) {
     Map & map = gameLocal.map;
     Camera2D & cam = gameLocal.cam;
@@ -236,11 +275,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
                     Entity * entity = &map.entities[i];
                     if (entity->inUse && entity->playerNumber == gameLocal.playerNumber) {
                         Bounds b = EntityGetSelectionBounds(entity);
-                        if (b.type == BOUNDS_TYPE_CIRCLE && CircleVsCircle(b.circle, { mouseWorld, 10 })) {
-                            entity->selected = true;
-                            map.selection.Add(entity->id);
-                        }
-                        else if (b.type == BOUNDS_TYPE_RECT && IsPointInRect(mouseWorld, b.rect)) {
+                        if (IsPointInBounds(mouseWorld, b)) {
                             entity->selected = true;
                             map.selection.Add(entity->id);
                         }
@@ -253,7 +288,16 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
         }
 
         if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
-            MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
+            Entity * entity = GetEntityUnderMouse(map, mouseWorld);
+            if (entity == nullptr) {
+                MapCreateCommandMoveSelectedUnits(map, gameLocal.mapTurn.cmds[gameLocal.mapTurn.commandCount++], V2fp(mouseWorld));
+            }
+            else {
+                if (MapSelectionContainsType(map, ENTITY_TYPE_GENERAL) && EntityIsResourceNode(entity)) {
+                    
+                    printf("General is going to collect resources.\n");
+                }
+            }
         }
     }
 
@@ -267,6 +311,8 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
             switch (entity->type) {
             case ENTITY_TYPE_GENERAL:               DrawGeneral(*entity); break;
             case ENTITY_TYPE_BUILDING_TOWN_CENTER:  DrawTownCenter(*entity); break;
+            case ENTITY_TYPE_RESOURCE_NODE_R1:      DrawResource1(*entity); break;
+            case ENTITY_TYPE_RESOURCE_NODE_R2:      DrawResource2(*entity); break;
             default:
                 break;
             }
@@ -320,7 +366,7 @@ void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, Re
     UIStateDraw();
 
     EndDrawing();
-    }
+}
 
 void UIStateReset() {
     uiState.surfaceMouse = { GetMousePosition().x, GetMousePosition().y };

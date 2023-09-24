@@ -33,8 +33,11 @@ void MapCreate(Map & map, bool singlePlayer) {
     MapSpawnGeneral(map, 1, V2fp(-50, 20));
     MapSpawnGeneral(map, 2, V2fp(50, 20));
 
-    MapSpawnBuildingCenter(map, 1, MapTileGetFlatIndex(47, 45));
-    MapSpawnBuildingCenter(map, 2, MapTileGetFlatIndex(51, 45));
+    MapSpawnBuildingTownCenter(map, 1, MapTileGetFlatIndex(47, 45));
+    MapSpawnBuildingTownCenter(map, 2, MapTileGetFlatIndex(51, 45));
+
+    MapSpawnResourceNodeR1(map, MapTileGetFlatIndex(47, 38), 100);
+    MapSpawnResourceNodeR2(map, MapTileGetFlatIndex(52, 38), 100);
 }
 
 void MapStart(Map & map) {
@@ -53,7 +56,7 @@ bool MapSelectionContainsType(Map & map, EntityType type) {
     return false;
 }
 
-Entity * MapLookUpEntity(Map & map, EntityId id) {
+Entity * MapLookUpEntityFromId(Map & map, EntityId id) {
     if (id.idx < 0 || id.idx >= MAX_MAP_ENTITIES) {
         return nullptr;
     }
@@ -83,6 +86,15 @@ Bounds EntityGetSelectionBounds(Entity * entity) {
         result.rect.max = entity->townCenter.visPos + dims;
         return result;
     } break;
+    case ENTITY_TYPE_RESOURCE_NODE_R1: // Fallthrough
+    case ENTITY_TYPE_RESOURCE_NODE_R2: {
+        v2 dims = V2(MAP_TILE_WIDTH, MAP_TILE_HEIGHT) * V2(RESOURCE_NODE_TILE_W_COUNT, RESOURCE_NODE_TILE_H_COUNT);
+        Bounds result = {};
+        result.type = BOUNDS_TYPE_RECT;
+        result.rect.min = entity->resourceNode.visPos;
+        result.rect.max = entity->resourceNode.visPos + dims;
+        return result;
+    } break;
     default: {
         Assert(false && "Invalid entity type, you probably forget to add it here");
         return {};
@@ -90,6 +102,12 @@ Bounds EntityGetSelectionBounds(Entity * entity) {
     };
 
     return {};
+}
+
+bool EntityIsResourceNode(Entity * entity) {
+    const i32 begin = ENTITY_TYPE_RESOURCE_NODE_BEGIN;
+    const i32 end = ENTITY_TYPE_RESOURCE_NODE_END;
+    return entity->type > begin && entity->type < end;
 }
 
 Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber) {
@@ -133,7 +151,7 @@ Entity * MapSpawnGeneral(Map & map, i32 playerNumber, v2fp pos) {
     return entity;
 }
 
-Entity * MapSpawnBuildingCenter(Map & map, i32 playerNumber, i32 baseTileIndex) {
+Entity * MapSpawnBuildingTownCenter(Map & map, i32 playerNumber, i32 baseTileIndex) {
     Assert(baseTileIndex >= 0 && baseTileIndex < MAX_MAP_TILES);
     Assert(map.tiles[baseTileIndex].isWalkable);
 
@@ -144,14 +162,37 @@ Entity * MapSpawnBuildingCenter(Map & map, i32 playerNumber, i32 baseTileIndex) 
         entity->townCenter.baseTileIndex = baseTileIndex;
 
         // Mark the tiles as unwalkable
-        for (i32 y = 0; y < BUILDING_TOWN_CENTER_TILE_H_COUNT; y++) {
-            for (i32 x = 0; x < BUILDING_TOWN_CENTER_TILE_W_COUNT; x++) {
-                i32 tileXIndex = entity->townCenter.baseTileIndex % MAX_MAP_TILE_W_COUNT;
-                i32 tileYIndex = entity->townCenter.baseTileIndex / MAX_MAP_TILE_W_COUNT;
-                i32 tileFlatIndex = MapTileGetFlatIndex(tileXIndex + x, tileYIndex + y);
-                map.tiles[tileFlatIndex].isWalkable = false;
-            }
-        }
+        MapTileMarkAsWalkable(map, baseTileIndex, BUILDING_TOWN_CENTER_TILE_W_COUNT, BUILDING_TOWN_CENTER_TILE_H_COUNT, false);
+    }
+
+    return entity;
+}
+
+Entity * MapSpawnResourceNodeR1(Map & map, i32 baseTileIndex, i32 resourceCount) {
+    Entity * entity = MapSpawnEntity(map, ENTITY_TYPE_RESOURCE_NODE_R1, 0);
+    if (entity) {
+        entity->resourceNode.pos = MapTileFlatIndexToWorldPos(map, baseTileIndex);
+        entity->resourceNode.visPos = V2(entity->resourceNode.pos);
+        entity->resourceNode.baseTileIndex = baseTileIndex;
+        entity->resourceNode.resourceCount = resourceCount;
+
+        // Mark the tiles as unwalkable
+        MapTileMarkAsWalkable(map, baseTileIndex, RESOURCE_NODE_TILE_W_COUNT, RESOURCE_NODE_TILE_H_COUNT, false);
+    }
+
+    return entity;
+}
+
+Entity * MapSpawnResourceNodeR2(Map & map, i32 baseTileIndex, i32 resourceCount) {
+    Entity * entity = MapSpawnEntity(map, ENTITY_TYPE_RESOURCE_NODE_R2, 0);
+    if (entity) {
+        entity->resourceNode.pos = MapTileFlatIndexToWorldPos(map, baseTileIndex);
+        entity->resourceNode.visPos = V2(entity->resourceNode.pos);
+        entity->resourceNode.baseTileIndex = baseTileIndex;
+        entity->resourceNode.resourceCount = resourceCount;
+
+        // Mark the tiles as unwalkable
+        MapTileMarkAsWalkable(map, baseTileIndex, RESOURCE_NODE_TILE_W_COUNT, RESOURCE_NODE_TILE_H_COUNT, false);
     }
 
     return entity;
@@ -199,6 +240,17 @@ i32 MapTileWorldPosToFlatIndex(Map & map, v2fp pos) {
     return flatIndex;
 }
 
+void MapTileMarkAsWalkable(Map & map, i32 baseTileIndex, i32 wCount, i32 hCount, bool isWalkable) {
+    for (i32 y = 0; y < hCount; y++) {
+        for (i32 x = 0; x < wCount; x++) {
+            i32 tileXIndex = baseTileIndex % MAX_MAP_TILE_W_COUNT;
+            i32 tileYIndex = baseTileIndex / MAX_MAP_TILE_W_COUNT;
+            i32 tileFlatIndex = MapTileGetFlatIndex(tileXIndex + x, tileYIndex + y);
+            map.tiles[tileFlatIndex].isWalkable = isWalkable;
+        }
+    }
+}
+
 void MapCreateCommand(Map & map, MapCommand & action, MapCommandType type) {
     ZeroStruct(action);
     action.type = type;
@@ -212,10 +264,10 @@ void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & cmd, v2fp target)
     Assert(count <= ArrayCount(cmd.entities));
 
     for (i32 i = 0; i < count; i++) {
-        Entity * entity = MapLookUpEntity(map, map.selection[i]);
+        Entity * entity = MapLookUpEntityFromId(map, map.selection[i]);
         if (entity && entity->type == ENTITY_TYPE_GENERAL) {
             cmd.entities[cmd.entitiesCount] = map.selection[i];
-            cmd.entitiesCount++;;
+            cmd.entitiesCount++;
         }
     }
 }
@@ -293,6 +345,12 @@ void MapDoTurn(Map & map, MapTurn & player1Turn, MapTurn & player2Turn) {
                 }
             } break;
             case ENTITY_TYPE_BUILDING_TOWN_CENTER: {
+
+            } break;
+            case ENTITY_TYPE_RESOURCE_NODE_R1: {
+
+            } break;
+            case ENTITY_TYPE_RESOURCE_NODE_R2: {
 
             } break;
             default: {

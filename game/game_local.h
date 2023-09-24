@@ -86,3 +86,5 @@ void DoCameraZooming(Camera2D & cam);
 
 void DoScreenMainMenu(GameLocal & gameLocal);
 void DoScreenGame(GameLocal & gameLocal, i32 surfaceWidth, i32 surfaceHeight, RenderTexture2D surface);
+
+Entity * GetEntityUnderMouse(Map &map, v2 worldMouse);

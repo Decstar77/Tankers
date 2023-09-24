@@ -38,7 +38,16 @@ struct EntityId {
 enum EntityType {
     ENTITY_TYPE_INVALID = 0,
     ENTITY_TYPE_GENERAL,
+    
+    ENTITY_TYPE_RESOURCE_NODE_BEGIN, // Place new resource node entities between RESOURCE_NODE_BEGIN and RESOURCE_NODE_END
+    ENTITY_TYPE_RESOURCE_NODE_R1,
+    ENTITY_TYPE_RESOURCE_NODE_R2,
+    ENTITY_TYPE_RESOURCE_NODE_END,
+
+    ENTITY_TYPE_BUILDING_BEGIN, // Place new building entities between BUILDING_BEGIN and BUILDING_END
     ENTITY_TYPE_BUILDING_TOWN_CENTER,
+    ENTITY_TYPE_BUILDING_END,
+
     ENTITY_TYPE_COUNT,
 };
 
@@ -60,6 +69,16 @@ struct BuildingTownHall {
     i32 baseTileIndex;
 };
 
+constexpr i32 RESOURCE_NODE_TILE_W_COUNT = 2;
+constexpr i32 RESOURCE_NODE_TILE_H_COUNT = 2;
+
+struct ResourceNode {
+    v2fp pos;
+    v2 visPos;
+    i32 resourceCount;
+    i32 baseTileIndex;
+};
+
 struct Entity {
     bool inUse;
     EntityId id;
@@ -67,8 +86,9 @@ struct Entity {
     bool selected;
     i32 playerNumber;
     union {
-        General general;
-        BuildingTownHall townCenter;
+        General             general;
+        BuildingTownHall    townCenter;
+        ResourceNode        resourceNode;
     };
 };
 
@@ -129,22 +149,26 @@ struct MapTurn {
 };
 
 Bounds EntityGetSelectionBounds(Entity * entity);
+bool   EntityIsResourceNode(Entity * entity);
 
 void MapCreate(Map & map, bool singlePlayer);
 void MapStart(Map & map);
 
 bool MapSelectionContainsType(Map & map, EntityType type);
 
-Entity * MapLookUpEntity(Map & map, EntityId id);
+Entity * MapLookUpEntityFromId(Map & map, EntityId id);
 
 Entity * MapSpawnEntity(Map & map, EntityType type, i32 playerNumber);
 Entity * MapSpawnGeneral(Map & map, i32 playerNumber, v2fp pos);
 
-Entity * MapSpawnBuildingCenter(Map & map, i32 playerNumber, i32 baseTileIndex);
+Entity * MapSpawnBuildingTownCenter(Map & map, i32 playerNumber, i32 baseTileIndex);
+Entity * MapSpawnResourceNodeR1(Map & map, i32 baseTileIndex, i32 resourceCount);
+Entity * MapSpawnResourceNodeR2(Map & map, i32 baseTileIndex, i32 resourceCount);
 
 i32     MapTileGetFlatIndex(i32 xIndex, i32 yIndex);
 v2fp    MapTileFlatIndexToWorldPos(Map & map, i32 flatIndex);
 i32     MapTileWorldPosToFlatIndex(Map & map, v2fp pos);
+void    MapTileMarkAsWalkable(Map & map, i32 baseTileIndex, i32 wCount, i32 hCount, bool isWalkable);
 
 void MapCreateCommand(Map & map, MapCommand & action, MapCommandType type);
 void MapCreateCommandMoveSelectedUnits(Map & map, MapCommand & action, v2fp target);
