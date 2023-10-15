@@ -124,7 +124,10 @@ static void ToolBarButtonEditorMode(LevelEditor & editor, LevelEditorToolMode mo
     UIColorsPop(UI_COLOR_SLOT_BACKGROUND);
 }
 
+#include "../vendor/fixed/Fixed64.h"
+
 int main(int argc, char * argv[]) {
+
     const char * iniPath = nullptr;
     if (argc == 2) {
         iniPath = argv[1];

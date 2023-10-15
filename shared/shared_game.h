@@ -147,7 +147,9 @@ struct MapTurn {
 };
 
 Bounds EntityGetSelectionBounds(Entity * entity);
-bool   EntityIsResourceNode(Entity * entity);
+
+Boundsfp    EntityGetCollider(Entity * entity);
+bool        EntityIsResourceNode(Entity * entity);
 
 void MapCreate(Map & map, bool singlePlayer);
 void MapStart(Map & map);

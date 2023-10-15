@@ -180,24 +180,53 @@ v2fp V2fp(v2 v);
 
 v2   V2(v2fp v);
 
-v2fp Min(v2fp a, v2fp b);
-v2fp Max(v2fp a, v2fp b);
-fp   Dot(v2fp a, v2fp b);
-v2fp Normalize(v2fp v);
-v2fp Lerp(v2fp a, v2fp b, fp t);
-v2fp Reflect(v2fp v, v2fp n);
-v2fp Clamp(v2fp v, v2fp min, v2fp max);
-fp   SignedAngle(v2fp a, v2fp b);
-bool RoughlyEqual(v2fp a, v2fp b, fp epsilon = Fp(0.0001f));
-bool RoughlyZero(v2fp a, fp epsilon = Fp(0.0001f));
+fp Dot(v2fp a, v2fp b);
+fp DistanceSqrd(v2fp a, v2fp b);
+
+// v2fp Min(v2fp a, v2fp b);
+// v2fp Max(v2fp a, v2fp b);
+
+// v2fp Normalize(v2fp v);
+// v2fp Lerp(v2fp a, v2fp b, fp t);
+// v2fp Reflect(v2fp v, v2fp n);
+// v2fp Clamp(v2fp v, v2fp min, v2fp max);
+// fp   SignedAngle(v2fp a, v2fp b);
+// bool RoughlyEqual(v2fp a, v2fp b, fp epsilon = Fp(0.0001f));
+// bool RoughlyZero(v2fp a, fp epsilon = Fp(0.0001f));
 
 v2fp operator+(v2fp a, v2fp b);
 v2fp operator-(v2fp a, v2fp b);
 v2fp operator*(v2fp a, fp b);
+v2fp operator*(v2fp a, v2fp b);
 v2fp operator/(v2fp a, fp b);
 
 v2fp operator*(fp a, v2fp b);
 v2fp operator/(fp a, v2fp b);
 
+struct Circlefp {
+    v2fp pos;
+    fp radius;
+};
+
+struct Rectfp {
+    v2fp min;
+    v2fp max;
+};
+
+enum BoundsTypefp {
+    BOUNDS_TYPEFP_INVALID = 0,
+    BOUNDS_TYPEFP_CIRCLE,
+    BOUNDS_TYPEFP_RECT,
+};
+
+struct Boundsfp {
+    BoundsTypefp type;
+    union {
+        Circlefp  circle;
+        Rectfp    rect;
+    };
+};
+
+v2fp GetBoundsFpCenter(Boundsfp bounds);
 
 

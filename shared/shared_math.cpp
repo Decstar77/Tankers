@@ -345,7 +345,6 @@ fp Mod(fp a, fp b) {
     return v;
 }
 
-
 fp Sin(fp x) {
     // This sine uses a fifth-order curve-fitting approximation originally
     // described by Jasper on coranac.com which has a worst-case
@@ -469,6 +468,15 @@ v2 V2(v2fp v) {
     return { FpToFloat(v.x), FpToFloat(v.y) };
 }
 
+fp Dot(v2fp a, v2fp b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+fp DistanceSqrd(v2fp a, v2fp b) {
+    v2fp diff = a - b;
+    return Dot(diff, diff);
+}
+
 v2fp operator+(v2fp a, v2fp b) {
     return { a.x + b.x, a.y + b.y };
 }
@@ -479,6 +487,10 @@ v2fp operator-(v2fp a, v2fp b) {
 
 v2fp operator*(v2fp a, fp b) {
     return { a.x * b, a.y * b };
+}
+
+v2fp operator*(v2fp a, v2fp b) {
+    return { a.x * b.x, a.y * b.y };
 }
 
 v2fp operator/(v2fp a, fp b) {
@@ -493,5 +505,14 @@ v2fp operator/(fp a, v2fp b) {
     return { a / b.x, a / b.y };
 }
 
-
+v2fp GetBoundsFpCenter(Boundsfp bounds) {
+    switch (bounds.type) {
+    case BOUNDS_TYPE_CIRCLE:
+        return bounds.circle.pos;
+    case BOUNDS_TYPE_RECT:
+        return (bounds.rect.min + bounds.rect.max) / Fp(2);
+    default:
+        return {};
+    }
+}
 

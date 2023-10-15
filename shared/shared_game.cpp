@@ -104,6 +104,41 @@ Bounds EntityGetSelectionBounds(Entity * entity) {
     return {};
 }
 
+Boundsfp EntityGetCollider(Entity * entity) {
+    switch (entity->type) {
+    case ENTITY_TYPE_GENERAL: {
+        Boundsfp result = {};
+        result.type = BOUNDS_TYPEFP_CIRCLE;
+        result.circle.pos = entity->general.pos;
+        result.circle.radius = Fp(7.0f);
+        return result;
+    } break;
+    case ENTITY_TYPE_BUILDING_TOWN_CENTER: {
+        v2fp dims = V2fp(MAP_TILE_WIDTH, MAP_TILE_HEIGHT) * V2fp(BUILDING_TOWN_CENTER_TILE_W_COUNT, BUILDING_TOWN_CENTER_TILE_H_COUNT);
+        Boundsfp result = {};
+        result.type = BOUNDS_TYPEFP_RECT;
+        result.rect.min = entity->townCenter.pos;
+        result.rect.max = entity->townCenter.pos + dims;
+        return result;
+    } break;
+    case ENTITY_TYPE_RESOURCE_NODE_R1: // Fallthrough
+    case ENTITY_TYPE_RESOURCE_NODE_R2: {
+        v2fp dims = V2fp(MAP_TILE_WIDTH, MAP_TILE_HEIGHT) * V2fp(RESOURCE_NODE_TILE_W_COUNT, RESOURCE_NODE_TILE_H_COUNT);
+        Boundsfp result = {};
+        result.type = BOUNDS_TYPEFP_RECT;
+        result.rect.min = entity->resourceNode.pos;
+        result.rect.max = entity->resourceNode.pos + dims;
+        return result;
+    } break;
+    default: {
+        Assert(false && "Invalid entity type, you probably forget to add it here");
+        return {};
+    } break;
+    };
+
+    return {};
+}
+
 bool EntityIsResourceNode(Entity * entity) {
     const i32 begin = ENTITY_TYPE_RESOURCE_NODE_BEGIN;
     const i32 end = ENTITY_TYPE_RESOURCE_NODE_END;
@@ -319,7 +354,7 @@ void MapDoTurn(Map & map, MapTurn & player1Turn, MapTurn & player2Turn) {
     Assert(map.turnNumber == player2Turn.turnNumber);
     Assert(player1Turn.checkSum == player2Turn.checkSum);
 
-    const i32 player1CommandCount= player1Turn.cmds.GetCount();
+    const i32 player1CommandCount = player1Turn.cmds.GetCount();
     for (i32 i = 0; i < player1CommandCount; i++) {
         MapApplyCommand(map, player1Turn.cmds[i]);
     }
@@ -344,6 +379,21 @@ void MapDoTurn(Map & map, MapTurn & player1Turn, MapTurn & player2Turn) {
                     grunt->pos = grunt->pos + dir * speed;
                     grunt->visPos = Lerp(grunt->visPos, V2(grunt->pos), 0.1f);
                 }
+
+                // // Check if we're near a resource node
+                // for (i32 resourceNodeIndex = 0; resourceNodeIndex < MAX_MAP_ENTITIES; resourceNodeIndex++) {
+                //     Entity * resourceNode = &map.entities[resourceNodeIndex];
+                //     if (resourceNode->inUse && EntityIsResourceNode(resourceNode)) {
+                //         Boundsfp b = EntityGetCollider(resourceNode);
+                //         v2fp c = GetBoundsFpCenter(b);
+                //         fp d = DistanceSqrd(c, entity->general.pos);
+                //         printf("d: %f\n", FpToFloat(d));
+                //         if (d < Fp(20.0f)) {
+                //             printf("Near resource node\n");
+                //         }
+                //     }
+                // }
+
             } break;
             case ENTITY_TYPE_BUILDING_TOWN_CENTER: {
 
