@@ -50,8 +50,7 @@
 // These functions should handle the cases for invalid arguments in any desired way (assert, exception, log, ignore etc).
 //#define FP_CUSTOM_INVALID_ARGS
 
-namespace FixedUtil
-{
+namespace FixedUtil {
     typedef int32_t FP_INT;
     typedef uint32_t FP_UINT;
     typedef int64_t FP_LONG;
@@ -63,15 +62,15 @@ namespace FixedUtil
     static_assert(sizeof(FP_ULONG) == 8, "Wrong bytesize for FP_ULONG");
 
 #ifdef FP_CUSTOM_INVALID_ARGS
-    extern void InvalidArgument(const char* funcName, const char* argName, FP_INT argValue);
-    extern void InvalidArgument(const char* funcName, const char* argName, FP_INT argValue1, FP_INT argValue2);
-    extern void InvalidArgument(const char* funcName, const char* argName, FP_LONG argValue);
-    extern void InvalidArgument(const char* funcName, const char* argName, FP_LONG argValue1, FP_LONG argValue2);
+    extern void InvalidArgument(const char * funcName, const char * argName, FP_INT argValue);
+    extern void InvalidArgument(const char * funcName, const char * argName, FP_INT argValue1, FP_INT argValue2);
+    extern void InvalidArgument(const char * funcName, const char * argName, FP_LONG argValue);
+    extern void InvalidArgument(const char * funcName, const char * argName, FP_LONG argValue1, FP_LONG argValue2);
 #else
-    static inline void InvalidArgument(const char* funcName, const char* argName, FP_INT argValue) { }
-    static inline void InvalidArgument(const char* funcName, const char* argName, FP_INT argValue1, FP_INT argValue2) { }
-    static inline void InvalidArgument(const char* funcName, const char* argName, FP_LONG argValue) { }
-    static inline void InvalidArgument(const char* funcName, const char* argName, FP_LONG argValue1, FP_LONG argValue2) { }
+    static inline void InvalidArgument(const char * funcName, const char * argName, FP_INT argValue) {}
+    static inline void InvalidArgument(const char * funcName, const char * argName, FP_INT argValue1, FP_INT argValue2) {}
+    static inline void InvalidArgument(const char * funcName, const char * argName, FP_LONG argValue) {}
+    static inline void InvalidArgument(const char * funcName, const char * argName, FP_LONG argValue1, FP_LONG argValue2) {}
 #endif
 
 
@@ -79,41 +78,34 @@ namespace FixedUtil
 
     // InvalidArgument function defined in the transpiler generated header
 
-    static FP_INT Qmul29(FP_INT a, FP_INT b)
-    {
+    static FP_INT Qmul29(FP_INT a, FP_INT b) {
         return (FP_INT)((FP_LONG)a * (FP_LONG)b >> 29);
     }
 
-    static FP_INT Qmul30(FP_INT a, FP_INT b)
-    {
+    static FP_INT Qmul30(FP_INT a, FP_INT b) {
         return (FP_INT)((FP_LONG)a * (FP_LONG)b >> 30);
     }
 
-    static FP_INT ShiftLeft(FP_INT v, FP_INT shift)
-    {
+    static FP_INT ShiftLeft(FP_INT v, FP_INT shift) {
         return (shift >= 0) ? (v << shift) : (v >> -shift);
     }
 
-    static FP_INT ShiftRight(FP_INT v, FP_INT shift)
-    {
+    static FP_INT ShiftRight(FP_INT v, FP_INT shift) {
         return (shift >= 0) ? (v >> shift) : (v << -shift);
     }
 
-    static FP_LONG ShiftRight(FP_LONG v, FP_INT shift)
-    {
+    static FP_LONG ShiftRight(FP_LONG v, FP_INT shift) {
         return (shift >= 0) ? (v >> shift) : (v << -shift);
     }
 
-    static FP_LONG LogicalShiftRight(FP_LONG v, FP_INT shift)
-    {
+    static FP_LONG LogicalShiftRight(FP_LONG v, FP_INT shift) {
         return (FP_LONG)((FP_ULONG)v >> shift);
     }
 
     // Exp2()
 
     // Precision: 13.24 bits
-    static FP_INT Exp2Poly3(FP_INT a)
-    {
+    static FP_INT Exp2Poly3(FP_INT a) {
         FP_INT y = Qmul30(a, 84039593); // 0.0782679701835315868647357253725971674790033117245148781445598202137415363194904317749528903660739148499430948967629357887
         y = Qmul30(a, y + 242996024); // 0.226307682289372255347421644246257966273699535419878898050811760122384683941875786929647503217974831952486347597791720611
         y = Qmul30(a, y + 746706207); // 0.695424347527096157787842630381144866247297152855606223804628419663873779738633781295399606415951253197570557505445343601
@@ -122,8 +114,7 @@ namespace FixedUtil
     }
 
     // Precision: 18.19 bits
-    static FP_INT Exp2Poly4(FP_INT a)
-    {
+    static FP_INT Exp2Poly4(FP_INT a) {
         FP_INT y = Qmul30(a, 14555373); // 0.0135557472348149177040307931905578544538124307723745221579881209426474911809748672636364432116420009120178935332926148611
         y = Qmul30(a, y + 55869331); // 0.0520323690084328924674487312215472415900450170687696511359785661622616863440911035364584944748959228308174520922142865995
         y = Qmul30(a, y + 259179547); // 0.241379762937091639018661074809242143033914474070411268883151785382581196588939527676019951096295687987322799846420118765
@@ -133,8 +124,7 @@ namespace FixedUtil
     }
 
     // Precision: 23.37 bits
-    static FP_INT Exp2Poly5(FP_INT a)
-    {
+    static FP_INT Exp2Poly5(FP_INT a) {
         FP_INT y = Qmul30(a, 2017903); // 0.00187931864849444079178064366523643962831734445578833344828943266930262096728457318136293441770024748382988959051143223706
         y = Qmul30(a, y + 9654007); // 0.0089909950956369787948425038952611903126353369666002380364841111113291819538448433335270460143993823536893996134420311419
         y = Qmul30(a, y + 59934847); // 0.0558186759615980431203104787377782200574008231751237416643519892213181468390965300572726745159591410385167709971364406724
@@ -147,8 +137,7 @@ namespace FixedUtil
     // Rcp()
 
     // Precision: 11.33 bits
-    static FP_INT RcpPoly4(FP_INT a)
-    {
+    static FP_INT RcpPoly4(FP_INT a) {
         FP_INT y = Qmul30(a, 166123244); // 0.154714327545457094588979713106287560782537959277436051827019427328357322113481152734370734443893548182187731839301875899
         y = Qmul30(a, y + -581431354); // -0.54150014640909983106142899587200646273888285747102618139456799564925062739718403457029757055362741863765712410515426083
         y = Qmul30(a, y + 939345296); // 0.874833479742433164394762329205339796072216190804359514727901328982583960730517367903630903886960751970990489874952162084
@@ -158,8 +147,7 @@ namespace FixedUtil
     }
 
     // Precision: 16.53 bits
-    static FP_INT RcpPoly6(FP_INT a)
-    {
+    static FP_INT RcpPoly6(FP_INT a) {
         FP_INT y = Qmul30(a, 77852993); // 0.0725062501842326696626758301282171253618850679805450684783331254738896577827939599454470990870969993306249485759929666981
         y = Qmul30(a, y + -350338469); // -0.326278125829047013482041235576977064128482805912452808152499064632503460022572819754511945891936496987812268591968349959
         y = Qmul30(a, y + 723231606); // 0.673561921455982545223734340382301840739167811454662043292934558465813280438563313561682188125190962075365760110255605888
@@ -179,8 +167,7 @@ namespace FixedUtil
     };
 
     // Precision: 15.66 bits
-    static FP_INT RcpPoly3Lut4(FP_INT a)
-    {
+    static FP_INT RcpPoly3Lut4(FP_INT a) {
         FP_INT offset = (a >> 28) * 4;
         FP_INT y = Qmul30(a, RcpPoly3Lut4Table[offset + 0]);
         y = Qmul30(a, y + RcpPoly3Lut4Table[offset + 1]);
@@ -202,8 +189,7 @@ namespace FixedUtil
     };
 
     // Precision: 24.07 bits
-    static FP_INT RcpPoly4Lut8(FP_INT a)
-    {
+    static FP_INT RcpPoly4Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 5;
         FP_INT y = Qmul30(a, RcpPoly4Lut8Table[offset + 0]);
         y = Qmul30(a, y + RcpPoly4Lut8Table[offset + 1]);
@@ -216,8 +202,7 @@ namespace FixedUtil
     // Sqrt()
 
     // Precision: 13.36 bits
-    static FP_INT SqrtPoly3(FP_INT a)
-    {
+    static FP_INT SqrtPoly3(FP_INT a) {
         FP_INT y = Qmul30(a, 26809804); // 0.0249685755493961204934845015323729712245958715357182065425848552518546416164312449413742280712638308483065114885417147904
         y = Qmul30(a, y + -116435772); // -0.108439263715492087333244576730247754908569708153374339944951137491994192013534152641012071161185446185655458733810736431
         y = Qmul30(a, y + 534384395); // 0.497684250539191015641448799407572862253645711994604206579046020230872028859209946550025377417563188072362793476181318665
@@ -226,8 +211,7 @@ namespace FixedUtil
     }
 
     // Precision: 16.50 bits
-    static FP_INT SqrtPoly4(FP_INT a)
-    {
+    static FP_INT SqrtPoly4(FP_INT a) {
         FP_INT y = Qmul30(a, -11559524); // -0.0107656468280005064933278905326776959702034851444407595549875999349858889266381514341825269487372902092181743561671344361
         y = Qmul30(a, y + 49235626); // 0.0458542501550120083313075597659725264999808459122954966477604412728019257521420334516113399358029950852981420572751187192
         y = Qmul30(a, y + -129356986); // -0.120473082434524586846319215086079446047783981719931015048359535322204769538816469963000080874223090148906445903268633479
@@ -249,8 +233,7 @@ namespace FixedUtil
     };
 
     // Precision: 23.56 bits
-    static FP_INT SqrtPoly3Lut8(FP_INT a)
-    {
+    static FP_INT SqrtPoly3Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 4;
         FP_INT y = Qmul30(a, SqrtPoly3Lut8Table[offset + 0]);
         y = Qmul30(a, y + SqrtPoly3Lut8Table[offset + 1]);
@@ -262,8 +245,7 @@ namespace FixedUtil
     // RSqrt()
 
     // Precision: 10.55 bits
-    static FP_INT RSqrtPoly3(FP_INT a)
-    {
+    static FP_INT RSqrtPoly3(FP_INT a) {
         FP_INT y = Qmul30(a, -91950555); // -0.0856356289309618075724442347978716997984112060739604608172096078728382955692378474864988406402256175535135909431476122756
         y = Qmul30(a, y + 299398639); // 0.278836710932968623313626076681628936089988230155462820435332822241435754263689225928134347217644388668377307808008581711
         y = Qmul30(a, y + -521939780); // -0.486094300815459291340337479778908197006741086393028323029783345373231219463397859016441739413597984747356793749404820923
@@ -272,8 +254,7 @@ namespace FixedUtil
     }
 
     // Precision: 16.08 bits
-    static FP_INT RSqrtPoly5(FP_INT a)
-    {
+    static FP_INT RSqrtPoly5(FP_INT a) {
         FP_INT y = Qmul30(a, -34036183); // -0.0316986662178132948125724057457789067274319219669948992806572724657733410288354401675056668794389506376695226173434879395
         y = Qmul30(a, y + 140361627); // 0.130721952132469025002475913996909202114937889568059538633961150597311078891698356228999013320515864372663894767082977274
         y = Qmul30(a, y + -276049470); // -0.257091104134768572313864227992129218223743238765168155465701243532365537275047394354439662434976402678179717893043406024
@@ -304,8 +285,7 @@ namespace FixedUtil
     };
 
     // Precision: 24.59 bits
-    static FP_INT RSqrtPoly3Lut16(FP_INT a)
-    {
+    static FP_INT RSqrtPoly3Lut16(FP_INT a) {
         FP_INT offset = (a >> 26) * 4;
         FP_INT y = Qmul30(a, RSqrtPoly3Lut16Table[offset + 0]);
         y = Qmul30(a, y + RSqrtPoly3Lut16Table[offset + 1]);
@@ -317,8 +297,7 @@ namespace FixedUtil
     // Log()
 
     // Precision: 12.18 bits
-    static FP_INT LogPoly5(FP_INT a)
-    {
+    static FP_INT LogPoly5(FP_INT a) {
         FP_INT y = Qmul30(a, 34835446); // 0.0324430374324099257645920506145091908173169505782530351933872568452187970039716570286755191899094832608276898590172296967
         y = Qmul30(a, y + -149023176); // -0.138788648453891138663259214948877985710758551758834443319382469349215457727435900740974302256302169487791331019735819359
         y = Qmul30(a, y + 315630515); // 0.293953823490661881198275484636301174125635657531784266710660462843103551518793294127904893642006610982580864921150987405
@@ -336,8 +315,7 @@ namespace FixedUtil
     };
 
     // Precision: 12.51 bits
-    static FP_INT LogPoly3Lut4(FP_INT a)
-    {
+    static FP_INT LogPoly3Lut4(FP_INT a) {
         FP_INT offset = (a >> 28) * 4;
         FP_INT y = Qmul30(a, LogPoly3Lut4Table[offset + 0]);
         y = Qmul30(a, y + LogPoly3Lut4Table[offset + 1]);
@@ -359,8 +337,7 @@ namespace FixedUtil
     };
 
     // Precision: 15.35 bits
-    static FP_INT LogPoly3Lut8(FP_INT a)
-    {
+    static FP_INT LogPoly3Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 4;
         FP_INT y = Qmul30(a, LogPoly3Lut8Table[offset + 0]);
         y = Qmul30(a, y + LogPoly3Lut8Table[offset + 1]);
@@ -382,8 +359,7 @@ namespace FixedUtil
     };
 
     // Precision: 26.22 bits
-    static FP_INT LogPoly5Lut8(FP_INT a)
-    {
+    static FP_INT LogPoly5Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 6;
         FP_INT y = Qmul30(a, LogPoly5Lut8Table[offset + 0]);
         y = Qmul30(a, y + LogPoly5Lut8Table[offset + 1]);
@@ -397,8 +373,7 @@ namespace FixedUtil
     // Log2()
 
     // Precision: 12.29 bits
-    static FP_INT Log2Poly5(FP_INT a)
-    {
+    static FP_INT Log2Poly5(FP_INT a) {
         FP_INT y = Qmul30(a, 47840369); // 0.0445548155276207896995334754162140597637031202974591126199168774393873986289641382244343408731171726931757539068975485089
         y = Qmul30(a, y + -208941842); // -0.194592255208938416591621284205816720732140050852301947258138293025978577320103558315407526014074332839410207729682281855
         y = Qmul30(a, y + 450346773); // 0.419418116511448143225544710148490988337404380945888758986024844824480954559055561814904948371254539592688384332290775469
@@ -416,8 +391,7 @@ namespace FixedUtil
     };
 
     // Precision: 17.47 bits
-    static FP_INT Log2Poly4Lut4(FP_INT a)
-    {
+    static FP_INT Log2Poly4Lut4(FP_INT a) {
         FP_INT offset = (a >> 28) * 5;
         FP_INT y = Qmul30(a, Log2Poly4Lut4Table[offset + 0]);
         y = Qmul30(a, y + Log2Poly4Lut4Table[offset + 1]);
@@ -436,8 +410,7 @@ namespace FixedUtil
     };
 
     // Precision: 21.93 bits
-    static FP_INT Log2Poly5Lut4(FP_INT a)
-    {
+    static FP_INT Log2Poly5Lut4(FP_INT a) {
         FP_INT offset = (a >> 28) * 6;
         FP_INT y = Qmul30(a, Log2Poly5Lut4Table[offset + 0]);
         y = Qmul30(a, y + Log2Poly5Lut4Table[offset + 1]);
@@ -461,8 +434,7 @@ namespace FixedUtil
     };
 
     // Precision: 15.82 bits
-    static FP_INT Log2Poly3Lut8(FP_INT a)
-    {
+    static FP_INT Log2Poly3Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 4;
         FP_INT y = Qmul30(a, Log2Poly3Lut8Table[offset + 0]);
         y = Qmul30(a, y + Log2Poly3Lut8Table[offset + 1]);
@@ -492,8 +464,7 @@ namespace FixedUtil
     };
 
     // Precision: 18.77 bits
-    static FP_INT Log2Poly3Lut16(FP_INT a)
-    {
+    static FP_INT Log2Poly3Lut16(FP_INT a) {
         FP_INT offset = (a >> 26) * 4;
         FP_INT y = Qmul30(a, Log2Poly3Lut16Table[offset + 0]);
         y = Qmul30(a, y + Log2Poly3Lut16Table[offset + 1]);
@@ -523,8 +494,7 @@ namespace FixedUtil
     };
 
     // Precision: 25.20 bits
-    static FP_INT Log2Poly4Lut16(FP_INT a)
-    {
+    static FP_INT Log2Poly4Lut16(FP_INT a) {
         FP_INT offset = (a >> 26) * 5;
         FP_INT y = Qmul30(a, Log2Poly4Lut16Table[offset + 0]);
         y = Qmul30(a, y + Log2Poly4Lut16Table[offset + 1]);
@@ -537,8 +507,7 @@ namespace FixedUtil
     // Sin()
 
     // Precision: 12.55 bits
-    static FP_INT SinPoly2(FP_INT a)
-    {
+    static FP_INT SinPoly2(FP_INT a) {
         FP_INT y = Qmul30(a, 78160664); // 0.072792791246675240806633584756838912025391316324690126147664432597740012658387971002826696503964998382073099859493224924
         y = Qmul30(a, y + -691048553); // -0.643589118041571860037955276396590354123911419602492412009771153095258421228154501762591444328997849123819708031503216569
         y = y + 1686629713; // 1.57079632679489661923132169163975144209852010327780228586210672049751840856976653075976474782503285074174660817200999164
@@ -546,8 +515,7 @@ namespace FixedUtil
     }
 
     // Precision: 19.56 bits
-    static FP_INT SinPoly3(FP_INT a)
-    {
+    static FP_INT SinPoly3(FP_INT a) {
         FP_INT y = Qmul30(a, -4685819); // -0.00436400981703153243210864997931625819052350492882668525242722064533389220603470732171385204753335364507030843902034709469
         y = Qmul30(a, y + 85358772); // 0.0794965509242783578799016950654626792792298788902324903830739535612665082075477776612291621671450318813032241372211405835
         y = Qmul30(a, y + -693560840); // -0.645928867902143444679114736725897863187226477239208090992753453413451024571279601099280057944644528977979523870210785134
@@ -556,8 +524,7 @@ namespace FixedUtil
     }
 
     // Precision: 27.13 bits
-    static FP_INT SinPoly4(FP_INT a)
-    {
+    static FP_INT SinPoly4(FP_INT a) {
         FP_INT y = Qmul30(a, 162679); // 0.000151506641710145430212560273580165931825591912723771559939880958777921352896251494433561036087921925941339032487946104446
         y = Qmul30(a, y + -5018587); // -0.0046739239118693360423625115440933405485555388758012378155538229669555462190128366781129325889847935291248353457031014355
         y = Qmul30(a, y + 85566362); // 0.0796898846149471415166275702814129714699583291426024010731469442497475447581642697337742897122044339073717901878121832219
@@ -569,8 +536,7 @@ namespace FixedUtil
     // Atan()
 
     // Precision: 11.51 bits
-    static FP_INT AtanPoly4(FP_INT a)
-    {
+    static FP_INT AtanPoly4(FP_INT a) {
         FP_INT y = Qmul30(a, 160726798); // 0.149688495302819745936382180128149414212975169816783327757105073455364913850052796368792673611118203908491930788482514717
         y = Qmul30(a, y + -389730008); // -0.3629643552067315751294669187222720090413427534177140297655271624082990667114095804438257977266614399793827935382192301
         y = Qmul30(a, y + -1791887); // -0.00166882600835556487643157555251563341464517039273944961175492629580374127544152356827950414733023151629754542508176777682
@@ -589,11 +555,10 @@ namespace FixedUtil
         -58345538, 276259197, -435975641, -35140679, 1101731779, -5215389,
         -36116738, 179244146, -266417331, -183483381, 1166696761, -16608596,
         0, 0, 0, 0, 0, 843314857 // Atan(1.0)
-	};
+    };
 
     // Precision: 28.06 bits
-    static FP_INT AtanPoly5Lut8(FP_INT a)
-    {
+    static FP_INT AtanPoly5Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 6;
         FP_INT y = Qmul30(a, AtanPoly5Lut8Table[offset + 0]);
         y = Qmul30(a, y + AtanPoly5Lut8Table[offset + 1]);
@@ -618,8 +583,7 @@ namespace FixedUtil
     };
 
     // Precision: 17.98 bits
-    static FP_INT AtanPoly3Lut8(FP_INT a)
-    {
+    static FP_INT AtanPoly3Lut8(FP_INT a) {
         FP_INT offset = (a >> 27) * 4;
         FP_INT y = Qmul30(a, AtanPoly3Lut8Table[offset + 0]);
         y = Qmul30(a, y + AtanPoly3Lut8Table[offset + 1]);
@@ -631,7 +595,7 @@ namespace FixedUtil
 
 
 
-    #undef FP_ASSERT
+#undef FP_ASSERT
 };
 #endif // __FIXEDUTIL_H
 
