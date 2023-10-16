@@ -1,4 +1,5 @@
-#include "shared_ini.h"
+#include "game_ini.h"
+
 #include <stdio.h>
 #include <cstring>
 

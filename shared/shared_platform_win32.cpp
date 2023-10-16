@@ -59,6 +59,15 @@ const char * PlatformFileDialogSave(const char * path, const char * filter) {
     return nullptr;
 }
 
+void PlatformPrint(const char * msg, ...) {
+    char buffer[1024] = {};
+    va_list args;
+    va_start(args, msg);
+    vsprintf_s(buffer, sizeof(buffer), msg, args);
+    va_end(args);
+    OutputDebugStringA(buffer);
+}
+
 #endif
 
 

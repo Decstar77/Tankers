@@ -6,7 +6,6 @@ set CommonLinkerFlags= -incremental:no -opt:ref user32.lib Comdlg32.lib
 rem /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup
 set GameLinkerFlags= ..\vendor\raylib\lib\raylibdll.lib 
 
-set GameFiles=..\game\game_main.cpp ..\game\game_client.cpp ..\game\game_local.cpp ..\game\game_sync.cpp 
 set ServerFiles=..\server\server_main.cpp
 
 setlocal enabledelayedexpansion
@@ -15,6 +14,11 @@ for /r "shared" %%f in (*.cpp) do (
     set "SharedFiles=!SharedFiles! "%%f""
 )
 rem echo Shared files: !SharedFiles!
+rem Find all game files
+for /r "game" %%f in (*.cpp) do (
+    set "GameFiles=!GameFiles! "%%f""
+)
+rem echo Game files: !GameFiles!
 
 IF NOT EXIST bin mkdir bin
 pushd bin

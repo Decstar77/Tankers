@@ -1,8 +1,8 @@
-#include "../shared/shared_ini.h"
 #include "../shared/shared_game.h"
 
 #include "game_client.h"
 #include "game_local.h"
+#include "game_ini.h"
 
 #include "../vendor/raylib/include/raylib.h"
 

@@ -9,7 +9,7 @@
 #define Assert(x)                                                               \
     {                                                                           \
         if (!(x)) {                                                             \
-            printf(#x);                                                         \
+            PlatformPrint(#x);                                                  \
             PlatformAssert(#x, FILE_NAME, FUNCTION_NAME, LINE_NUMBER);          \
             *(int *)0 = 0;                                                      \
         }                                                                       \
@@ -58,5 +58,7 @@ typedef u8 byte;
 void         PlatformAssert(const char * msg, const char * file, const char * functionName, int line);
 const char * PlatformFileDialogOpen(const char * path, const char * filter);
 const char * PlatformFileDialogSave(const char * path, const char * filter);
+
+void         PlatformPrint(const char * msg, ...);
 
 void        MemorySet(void * dest, u8 value, u64 size);
