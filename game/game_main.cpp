@@ -3,6 +3,8 @@
 #include "game_client.h"
 #include "game_local.h"
 #include "game_ini.h"
+#include "game_ui.h"
+#include "game_settings.h"
 
 #include "../vendor/raylib/include/raylib.h"
 
@@ -10,7 +12,6 @@
 #include <stdarg.h>
 #include <string>
 #include <cstring>
-
 
 static GameSettings ParseConfigFileForGameSettings(Config & config) {
     GameSettings settings = {};
