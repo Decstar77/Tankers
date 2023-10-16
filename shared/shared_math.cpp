@@ -315,26 +315,24 @@ bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult * resul
     return true;
 }
 
-#include "../vendor/fixed/Fixed64.h"
-
 fp Fp(i32 value) {
     fp p = {};
-    p.value = Fixed64::FromInt(value);
+    p.value = value << 16;
     return p;
 }
 
 fp Fp(f32 f) {
     fp p = {};
-    p.value = Fixed64::FromFloat(f);
+    p.value = i32(f * f32(1 << 16) + (f >= 0 ? 0.5 : 0.5));
     return p;
 }
 
 f32 FpToFloat(fp a) {
-    return Fixed64::ToFloat(a.value);
+    return f32(a.value) / f32(1 << 16);
 }
 
 i32 FpToInt(fp a) {
-    return Fixed64::RoundToInt(a.value);
+    return a.value >> 16;
 }
 
 i64 I64(fp f) {
@@ -342,44 +340,67 @@ i64 I64(fp f) {
 }
 
 fp Mod(fp a, fp b) {
-    fp p = {};
-    p.value = Fixed64::Mod(a.value, b.value);
-    return p;
+    fp v = {};
+    v.value = a.value % b.value;
+    return v;
 }
 
 fp Sin(fp x) {
-    fp p = {};
-    p.value = Fixed64::Sin(x.value);
-    return p;
+    // This sine uses a fifth-order curve-fitting approximation originally
+    // described by Jasper on coranac.com which has a worst-case
+    // relative error of 0.07% (over [-pi:pi]).
+
+    // Turn x from [0..2*PI] domain into [0..4] domain
+    x = Mod(x, FP_PI2);
+    x = x / FP_HALF_PI;
+
+    // Take x modulo one rotation, so [-4..+4].
+    if (x < Fp(0)) {
+        x = x + Fp(4);
+    }
+
+    int sign = +1;
+    if (x > Fp(2)) {
+        // Reduce domain to [0..2].
+        sign = -1;
+        x = x - Fp(2);
+    }
+
+    if (x > Fp(1)) {
+        // Reduce domain to [0..1].
+        x = Fp(2) - x;
+    }
+
+    const fp x2 = x * x;
+
+    return Fp(sign) * x * (FP_PI - x2 * (FP_PI2 - Fp(5) - x2 * (FP_PI - Fp(3)))) / Fp(2);
 }
 
 fp Cos(fp v) {
-    fp p = {};
-    p.value = Fixed64::Cos(v.value);
-    return p;
+    return Sin(v + FP_HALF_PI);
 }
 
 fp operator+(fp a, fp b) {
     fp p = {};
-    p.value = Fixed64::Add(a.value, b.value);
+    p.value = a.value + b.value;
     return p;
 }
 
 fp operator-(fp a, fp b) {
     fp p = {};
-    p.value = Fixed64::Sub(a.value, b.value);
+    p.value = a.value - b.value;
     return p;
 }
 
 fp operator*(fp a, fp b) {
     fp p = {};
-    p.value = Fixed64::Mul(a.value, b.value);
+    p.value = i32((i64(a.value) * i64(b.value)) >> 16);
     return p;
 }
 
 fp operator/(fp a, fp b) {
     fp p = {};
-    p.value = Fixed64::Div(a.value, b.value);
+    p.value = i32((i64(a.value) << 16) / i64(b.value));
     return p;
 }
 
@@ -418,16 +439,12 @@ fp & operator-=(fp & a, fp b) {
 }
 
 fp & operator*=(fp & a, fp b) {
-    fp p;
-    p.value = Fixed64::Mul(a.value, b.value);
-    a = p;
+    a.value = i32((i64(a.value) * i64(b.value)) >> 16);
     return a;
 }
 
 fp & operator/=(fp & a, fp b) {
-    fp p;
-    p.value = Fixed64::Div(a.value, b.value);
-    a = p;
+    a.value = i32((i64(a.value) << 16) / i64(b.value));
     return a;
 }
 

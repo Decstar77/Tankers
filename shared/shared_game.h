@@ -134,7 +134,7 @@ enum MapCommandType {
     MAP_COMMAND_COUNT,
 };
 
-struct MapCommand {         // TODO: Make sure this is heap allocated or something because it's going to be quite big I think
+struct MapCommand { // TODO: Make sure this is heap allocated or something because it's going to be quite big I think
     MapCommandType   type;
     FixedList<EntityId, 5> entities;
     v2fp            target;

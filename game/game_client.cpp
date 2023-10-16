@@ -1,5 +1,7 @@
 #include "game_client.h"
 
+#include <stdio.h>
+
 #ifdef ZeroMemory
 #undef ZeroMemory
 #endif
@@ -13,7 +15,7 @@ static ENetPeer * server = nullptr;
 
 bool NetworkConnectToServer(const char * address, int port) {
     if (enetInitialized == false && enet_initialize() != 0) {
-        PlatformPrint("An error occurred while initializing ENet.\n");
+        printf("An error occurred while initializing ENet.\n");
         return false;
     }
 
@@ -27,13 +29,13 @@ bool NetworkConnectToServer(const char * address, int port) {
     server = enet_host_connect(client, &enetAddress, 2, 0);
 
     if (server == nullptr) {
-        PlatformPrint("No available peers for initiating an ENet connection.\n");
+        printf("No available peers for initiating an ENet connection.\n");
         return false;
     }
 
     ENetEvent event = {};
     if (enet_host_service(client, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
-        PlatformPrint("Connection to %s:%d succeeded.\n", address, port);
+        printf("Connection to %s:%d succeeded.\n", address, port);
         return true;
     }
     else {
@@ -43,7 +45,7 @@ bool NetworkConnectToServer(const char * address, int port) {
         enet_host_destroy(client);
         client = nullptr;
 
-        PlatformPrint("Connection to %s:%d failed.\n", address, port);
+        printf("Connection to %s:%d failed.\n", address, port);
         return false;
     }
 }
@@ -60,12 +62,12 @@ void NetoworkDisconnectFromServer() {
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT: {
-                PlatformPrint("Disconnection succeeded.\n");
+                printf("Disconnection succeeded.\n");
                 disconnected = true;
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {
-                PlatformPrint("Disconnection failed.\n");
+                printf("Disconnection failed.\n");
                 break;
             }
             case ENET_EVENT_TYPE_NONE: {
@@ -105,14 +107,14 @@ bool NetworkPoll(GamePacket & packet) {
         }
         case ENET_EVENT_TYPE_DISCONNECT: {
             if (event.peer == server) {
-                PlatformPrint("Server disconnected.\n");
+                printf("Server disconnected.\n");
                 server = nullptr;
             }
             break;
         }
         case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {
             if (event.peer == server) {
-                PlatformPrint("Server disconnected.\n");
+                printf("Server disconnected.\n");
                 server = nullptr;
             }
             break;

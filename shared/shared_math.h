@@ -129,7 +129,7 @@ bool SweepCircleVsCircle(Circle c1, v2 c1_vel, Circle c2, v2 c2_vel, SweepResult
 bool SweepCircleVsRect(Circle c, v2 c_vel, Rect r, v2 r_vel, SweepResult * result);
 
 struct fp {
-    i64 value;
+    i32 value;
 };
 
 fp Fp(i32 value);
@@ -182,6 +182,17 @@ v2   V2(v2fp v);
 
 fp Dot(v2fp a, v2fp b);
 fp DistanceSqrd(v2fp a, v2fp b);
+
+// v2fp Min(v2fp a, v2fp b);
+// v2fp Max(v2fp a, v2fp b);
+
+// v2fp Normalize(v2fp v);
+// v2fp Lerp(v2fp a, v2fp b, fp t);
+// v2fp Reflect(v2fp v, v2fp n);
+// v2fp Clamp(v2fp v, v2fp min, v2fp max);
+// fp   SignedAngle(v2fp a, v2fp b);
+// bool RoughlyEqual(v2fp a, v2fp b, fp epsilon = Fp(0.0001f));
+// bool RoughlyZero(v2fp a, fp epsilon = Fp(0.0001f));
 
 v2fp operator+(v2fp a, v2fp b);
 v2fp operator-(v2fp a, v2fp b);

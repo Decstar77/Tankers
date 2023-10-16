@@ -1,5 +1,7 @@
 #include "game_sync.h"
 
+#include <stdio.h>
+
 void SyncQueues::Start() {
     player1Turns.Clear();
     player2Turns.Clear();
