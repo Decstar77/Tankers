@@ -1,3 +1,5 @@
+/*
+
 #include "game_local.h"
 #include "game_client.h"
 #include "game_ui.h"
@@ -408,3 +410,5 @@ void DoCameraZooming(Camera2D & cam) {
     cam.zoom += ((float)GetMouseWheelMove() * speed);
     cam.zoom = Clamp(cam.zoom, 0.5f, 2.0f);
 }
+
+*/

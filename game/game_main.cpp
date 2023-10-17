@@ -1,3 +1,130 @@
+#include "game_client.h"
+#include "game_local.h"
+#include "game_ini.h"
+#include "game_ui.h"
+#include "game_settings.h"
+
+#include "rendering/game_fonts.h"
+
+#include "../vendor/glad/glad.h"
+#include "../vendor/glfw/include/glfw/glfw3.h"
+
+static GLFWmonitor * monitor = nullptr;
+static LargeString                 monitorName = LargeString::FromLiteral("");
+static f64                         monitorRefreshRate = 0;
+static GLFWwindow * window = nullptr;
+static i32                         windowWidth = 0;
+static i32                         windowHeight = 0;
+static f32                         windowAspect = 0;
+static SmallString                 windowTitle = SmallString::FromLiteral("Game");
+static bool                        windowFullscreen = false;
+static bool                        shouldClose = false;
+
+int main(int argc, char * argv[]) {
+
+    const char * iniPath = nullptr;
+    if (argc == 2) {
+        iniPath = argv[1];
+    }
+
+    GameSettings gameSettings = CreateDefaultGameSettings();
+    if (iniPath != nullptr) {
+        PlatformPrint("Using ini file: %s\n", iniPath);
+        static Config cfg = {};
+        ReadEntireConfigFile(iniPath, cfg);
+        gameSettings = ParseConfigFileForGameSettings(cfg);
+    }
+
+    PlatformPrint("width: %d\n", gameSettings.width);
+    PlatformPrint("height: %d\n", gameSettings.height);
+    PlatformPrint("posX: %d\n", gameSettings.posX);
+    PlatformPrint("posY: %d\n", gameSettings.posY);
+    PlatformPrint("using server: %s\n", gameSettings.serverIp);
+
+    if (glfwInit() == GLFW_FALSE) {
+        PlatformPrint("Failed to init glfw\n");
+        return -1;
+    }
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+
+#if ATTO_DEBUG_RENDERING
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+#endif
+
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_FALSE);
+
+    monitor = glfwGetPrimaryMonitor();
+    if (monitor != nullptr) {
+        const GLFWvidmode * videoMode = glfwGetVideoMode(monitor);
+        monitorRefreshRate = videoMode->refreshRate;
+        monitorName = glfwGetMonitorName(monitor);
+    }
+
+    windowWidth = gameSettings.width;
+    windowHeight = gameSettings.height;
+
+    window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.GetCStr(), windowFullscreen ? monitor : nullptr, 0);
+
+    if (window == nullptr) {
+        PlatformPrint("Failed to create window\n");
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    // glfwSetCursorPosCallback(window, MousePositionCallback);
+    // glfwSetKeyCallback(window, KeyCallback);
+    // glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    // glfwSetScrollCallback(window, ScrollCallback);
+    // glfwSetFramebufferSizeCallback(window, FramebufferCallback);
+
+    if (gameSettings.posX != -1) {
+        glfwSetWindowPos(window, gameSettings.posX, gameSettings.posY);
+    }
+
+    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+    PlatformPrint("OpenGL %s, GLSL %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    i32 w = 0;
+    i32 h = 0;
+    glfwGetFramebufferSize(window, &w, &h);
+
+    InitFontRendering();
+
+    f64 currentTime = glfwGetTime();
+    f64 deltaTime = 0.0f;
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glClearColor(0.2f, 0.3f, 0.4f, 1);
+
+        glViewport(0, 0, w, h);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        FontRenderSomeText();
+
+        glfwSwapBuffers(window);
+        f64 endTime = glfwGetTime();
+        deltaTime = endTime - currentTime;
+        currentTime = endTime;
+    }
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+/*
 #include "../shared/shared_game.h"
 
 #include "game_client.h"
@@ -12,48 +139,6 @@
 #include <stdarg.h>
 #include <string>
 #include <cstring>
-
-static GameSettings ParseConfigFileForGameSettings(Config & config) {
-    GameSettings settings = {};
-    for (int i = 0; i < config.entryCount; i++) {
-        if (strcmp(config.entries[i].key, "window_x") == 0) {
-            settings.posX = atoi(config.entries[i].value);
-        }
-        else if (strcmp(config.entries[i].key, "window_y") == 0) {
-            settings.posY = atoi(config.entries[i].value);
-        }
-        else if (strcmp(config.entries[i].key, "window_width") == 0) {
-            settings.width = atoi(config.entries[i].value);
-        }
-        else if (strcmp(config.entries[i].key, "window_height") == 0) {
-            settings.height = atoi(config.entries[i].value);
-        }
-        else if (strcmp(config.entries[i].key, "window_fullscreen") == 0) {
-            settings.fullscreen = atoi(config.entries[i].value) != 0;
-        }
-        else if (strcmp(config.entries[i].key, "server_ip") == 0) {
-            strcpy_s(settings.serverIp, config.entries[i].value);
-        }
-        else if (strcmp(config.entries[i].key, "server_port") == 0) {
-            settings.serverPort = atoi(config.entries[i].value);
-        }
-    }
-
-    return settings;
-}
-
-static GameSettings CreateDefaultGameSettings() {
-    GameSettings settings = {};
-    settings.width = 1280;
-    settings.height = 720;
-    settings.posX = 200;
-    settings.posY = 200;
-    settings.fullscreen = false;
-    settings.serverPort = 27164;
-    strcpy_s(settings.serverIp, "127.0.0.1");
-
-    return settings;
-};
 
 static f32 tempTextTimer = 0.0f;
 static const char * tempCeterText = "";
@@ -182,3 +267,4 @@ int main(int argc, char * argv[]) {
 
     return 0;
 }
+*/
