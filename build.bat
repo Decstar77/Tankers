@@ -1,7 +1,7 @@
 @echo off
 
 set CommonCompilerFlags=-Od -Zi -MTd -nologo -WX -W3 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -EHsc -MP
-set CommonLinkerFlags= -incremental:no -opt:ref user32.lib opengl32.lib Comdlg32.lib
+set CommonLinkerFlags= -incremental:no -opt:ref user32.lib Comdlg32.lib
 
 rem /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup
 set GameLinkerFlags= ..\vendor\glfw\lib\glfw3dll.lib

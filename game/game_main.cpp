@@ -1,10 +1,13 @@
 #include "game_client.h"
 #include "game_local.h"
 #include "game_ini.h"
-#include "game_ui.h"
 #include "game_settings.h"
 
-#include "rendering/game_fonts.h"
+#include "rendering/game_rendering.h"
+
+#include "../vendor/glm/glm/glm.hpp"
+#include "../vendor/glm/glm/gtc/matrix_transform.hpp"
+#include "../vendor/glm/glm/gtc/type_ptr.hpp"
 
 #include "../vendor/glad/glad.h"
 #include "../vendor/glfw/include/glfw/glfw3.h"
@@ -112,7 +115,7 @@ int main(int argc, char * argv[]) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        FontRenderSomeText();
+        FontRenderSomeText((f32)w, (f32)h);
 
         glfwSwapBuffers(window);
         f64 endTime = glfwGetTime();
