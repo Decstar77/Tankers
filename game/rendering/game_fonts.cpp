@@ -18,7 +18,7 @@
 #undef ZeroMemory
 #include "game_rendering.h"
 
-const char * vShaderColored = R"(
+static const char * vShaderColored = R"(
     uniform mat4 modelView;
     uniform mat4 projection;
 
@@ -36,7 +36,7 @@ const char * vShaderColored = R"(
     }
 )";
 
-const char * fShaderColored = R"(
+static const char * fShaderColored = R"(
     uniform sampler2D diffuse;
 
     varying vec2 interpolatedTexCoord;
@@ -53,16 +53,20 @@ static FONScontext * fs = nullptr;
 static int fontId = FONS_INVALID;
 static ShaderProgram fontShaderProgram = {};
 
-void InitFontRendering() {
+void GLInitFontRendering() {
     fs = glfonsCreate(512, 512, FONS_ZERO_TOPLEFT);
     Assert(fs != nullptr);
     fontId = fonsAddFont(fs, "sans", "C:\\Projects\\Play2\\content\\DroidSerif-Regular.ttf");
-    fontShaderProgram = ShaderProgramCreate(vShaderColored, fShaderColored);
+    fontShaderProgram = GLShaderProgramCreate(vShaderColored, fShaderColored);
     Assert(fontId != FONS_INVALID);
 }
 
 void FontRenderSomeText(float w, float h) {
-    ShaderProgramBind(fontShaderProgram);
+
+    glViewport(0, 0, (i32)w, (i32)h);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GLShaderProgramBind(fontShaderProgram);
 
     glm::mat4 projection = glm::ortho(0.0f, (f32)w, (f32)h, 0.0f, -1.0f, 1.0f);
     glm::mat4 modelView = glm::mat4(1.0f);

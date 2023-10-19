@@ -97,7 +97,9 @@ int main(int argc, char * argv[]) {
     i32 h = 0;
     glfwGetFramebufferSize(window, &w, &h);
 
-    InitFontRendering();
+    InitRendering((f32)w, (f32)h);
+
+    static DrawCommands drawCommands = {};
 
     f64 currentTime = glfwGetTime();
     f64 deltaTime = 0.0f;
@@ -111,11 +113,12 @@ int main(int argc, char * argv[]) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glClearColor(0.2f, 0.3f, 0.4f, 1);
 
-        glViewport(0, 0, w, h);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
         FontRenderSomeText((f32)w, (f32)h);
+
+        drawCommands.commands.Clear();
+        DrawRect(drawCommands, glm::vec2(0, 0), glm::vec2(100, 100), 0, glm::vec4(1, 0, 0, 1));
+
+        RenderCommit(drawCommands);
 
         glfwSwapBuffers(window);
         f64 endTime = glfwGetTime();
