@@ -3,6 +3,8 @@
 #include "game_ini.h"
 #include "game_settings.h"
 
+#include "../shared/shared_input.h"
+
 #include "rendering/game_rendering.h"
 
 #include "../vendor/glm/glm/glm.hpp"
@@ -22,6 +24,27 @@ static f32                         windowAspect = 0;
 static SmallString                 windowTitle = SmallString::FromLiteral("Game");
 static bool                        windowFullscreen = false;
 static bool                        shouldClose = false;
+static FrameInput                  fi = {};
+
+static void KeyCallback(GLFWwindow * window, int key, int scancode, int action, int mods) {
+    fi.keys[key] = action != GLFW_RELEASE;
+}
+
+static void MousePositionCallback(GLFWwindow * window, double xpos, double ypos) {
+    fi.mousePosPixels = glm::vec2((f32)xpos, (f32)ypos);
+}
+
+static void MouseButtonCallback(GLFWwindow * window, int button, int action, int mods) {
+    fi.mouseButtons[button] = action != GLFW_RELEASE;
+}
+
+static void ScrollCallback(GLFWwindow * window, double xoffset, double yoffset) {
+    fi.mouseWheelDelta = glm::vec2((f32)xoffset, (f32)yoffset);
+}
+
+static void FramebufferCallback(GLFWwindow * window, i32 w, i32 h) {
+
+}
 
 int main(int argc, char * argv[]) {
 
@@ -80,11 +103,11 @@ int main(int argc, char * argv[]) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    // glfwSetCursorPosCallback(window, MousePositionCallback);
-    // glfwSetKeyCallback(window, KeyCallback);
-    // glfwSetMouseButtonCallback(window, MouseButtonCallback);
-    // glfwSetScrollCallback(window, ScrollCallback);
-    // glfwSetFramebufferSizeCallback(window, FramebufferCallback);
+    glfwSetCursorPosCallback(window, MousePositionCallback);
+    glfwSetKeyCallback(window, KeyCallback);
+    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwSetScrollCallback(window, ScrollCallback);
+    glfwSetFramebufferSizeCallback(window, FramebufferCallback);
 
     if (gameSettings.posX != -1) {
         glfwSetWindowPos(window, gameSettings.posX, gameSettings.posY);
@@ -106,7 +129,7 @@ int main(int argc, char * argv[]) {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        if (IsKeyJustDown(fi, KEY_CODE_ESCAPE)) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
 
@@ -128,7 +151,7 @@ int main(int argc, char * argv[]) {
 
     glfwDestroyWindow(window);
     glfwTerminate();
-}
+    }
 
 /*
 #include "../shared/shared_game.h"

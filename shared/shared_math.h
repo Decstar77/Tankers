@@ -230,3 +230,12 @@ struct Boundsfp {
 v2fp GetBoundsFpCenter(Boundsfp bounds);
 
 
+#include "../vendor/glm/glm/glm.hpp"
+#include "../vendor/glm/glm/vec2.hpp"
+#include "../vendor/glm/glm/vec3.hpp"
+#include "../vendor/glm/glm/vec4.hpp"
+#include "../vendor/glm/glm/gtc/matrix_transform.hpp"
+#include "../vendor/glm/glm/gtc/type_ptr.hpp"
+
+
+
